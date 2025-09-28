@@ -818,6 +818,11 @@ button:active:not(:disabled) {
 .seo-list {
     line-height: 1.8;
     color: #2c3e50;
+    padding-left: 20px;
+}
+
+.seo-list li {
+    margin-bottom: 10px;
 }
 
 .seo-recommendation-box {

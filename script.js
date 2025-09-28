@@ -774,46 +774,23 @@ function showPage(pageType) {
     // 선택된 페이지 보이기
     document.getElementById(pageType + '-page').style.display = 'block';
     
-    // 네비게이션 활성화 상태 업데이트
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
+    // 탭 활성화 상태 업데이트
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.remove('active');
     });
     
-    // 클릭된 메뉴 활성화
-    event.target.classList.add('active');
-    
-    // 모바일에서 사이드바 닫기
-    if (window.innerWidth <= 768) {
-        toggleSidebar();
-    }
-}
-
-// 사이드바 토글 (모바일용)
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebar-overlay');
-    const menuIcon = document.getElementById('menu-icon');
-    const body = document.body;
-    
-    sidebar.classList.toggle('open');
-    
-    if (sidebar.classList.contains('open')) {
-        overlay.style.display = 'block';
-        setTimeout(() => overlay.classList.add('active'), 10);
-        menuIcon.textContent = '✕';
-        body.style.overflow = 'hidden';
-    } else {
-        overlay.classList.remove('active');
-        setTimeout(() => overlay.style.display = 'none', 300);
-        menuIcon.textContent = '☰';
-        body.style.overflow = '';
-    }
+    // 클릭된 탭 찾아서 활성화
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        if ((pageType === 'car' && tab.textContent.includes('차량')) || 
+            (pageType === 'apartment' && tab.textContent.includes('부동산'))) {
+            tab.classList.add('active');
+        }
+    });
 }
 
 // 전역으로 함수 노출
 window.toggleDetail = toggleDetail;
 window.showPage = showPage;
-window.toggleSidebar = toggleSidebar;
 
 document.getElementById('salary').addEventListener('keypress', function(event) {
     if (event.key === 'Enter') {

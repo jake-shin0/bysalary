@@ -288,11 +288,36 @@ button:active:not(:disabled) {
 
 .car-item {
     background-color: #f8f9fa;
-    padding: 20px;
+    padding: 0;
     margin-bottom: 15px;
     border-radius: 8px;
     border-left: 4px solid #3498db;
     position: relative;
+    overflow: hidden;
+}
+
+.car-content-wrapper {
+    display: flex;
+    gap: 20px;
+}
+
+.car-image {
+    width: 200px;
+    height: 150px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.car-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.car-info {
+    flex: 1;
+    padding: 20px 20px 20px 0;
 }
 
 .car-header {
@@ -635,8 +660,21 @@ button:active:not(:disabled) {
     }
     
     .car-item {
-        padding: 15px;
         margin-bottom: 12px;
+    }
+    
+    .car-content-wrapper {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .car-image {
+        width: 100%;
+        height: 180px;
+    }
+    
+    .car-info {
+        padding: 15px;
     }
     
     .car-header {
@@ -927,7 +965,7 @@ button:active:not(:disabled) {
     background-color: #e8f5e9;
     padding: 20px;
     border-radius: 8px;
-    margin-top: 20px;
+    margin: 20px 20px 0 20px;
     border: 1px solid #c8e6c9;
 }
 
@@ -976,7 +1014,7 @@ button:active:not(:disabled) {
     background-color: #fff3e0;
     padding: 20px;
     border-radius: 8px;
-    margin-top: 20px;
+    margin: 20px 20px 20px 20px;
     border: 1px solid #ffe0b2;
 }
 

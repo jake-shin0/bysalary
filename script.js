@@ -204,20 +204,54 @@ function getInstallmentInfo() {
     };
 }
 
-function calculateMonthlyPayment(carPrice, installmentInfo) {
+// 취등록세 계산 함수
+function calculateRegistrationTax(carPriceManwon, fuelType) {
+    const carPriceWon = carPriceManwon * 10000;
+    
+    // 취득세 (차량가격의 7%, 전기차는 140만원 한도 감면)
+    let acquisitionTax = carPriceWon * 0.07;
+    if (fuelType === 'electric') {
+        acquisitionTax = Math.max(0, acquisitionTax - 1400000); // 140만원 감면
+    }
+    
+    // 등록세 (취득세의 40%)
+    const registrationTax = acquisitionTax * 0.4;
+    
+    // 공채매수 (지역별 차이가 있지만 평균적으로 취득세의 20% 수준)
+    const bondPurchase = acquisitionTax * 0.2;
+    
+    const totalTax = acquisitionTax + registrationTax + bondPurchase;
+    
+    return {
+        acquisitionTax: Math.round(acquisitionTax),
+        registrationTax: Math.round(registrationTax),
+        bondPurchase: Math.round(bondPurchase),
+        totalTax: Math.round(totalTax),
+        totalTaxManwon: Math.round(totalTax / 10000)
+    };
+}
+
+function calculateMonthlyPayment(carPrice, installmentInfo, fuelType = 'gasoline') {
     if (!installmentInfo.months || installmentInfo.months <= 0) {
         return null;
     }
     
-    const downPayment = carPrice * (installmentInfo.downPaymentPercent / 100);
-    const loanAmount = carPrice - downPayment;
+    // 취등록세 계산
+    const registrationTax = calculateRegistrationTax(carPrice, fuelType);
+    const totalCarCost = carPrice + registrationTax.totalTaxManwon; // 차량가격 + 취등록세
+    
+    const downPayment = totalCarCost * (installmentInfo.downPaymentPercent / 100);
+    const loanAmount = totalCarCost - downPayment;
     
     if (loanAmount <= 0) {
         return {
-            downPayment: carPrice,
+            carPrice: carPrice,
+            registrationTax: registrationTax,
+            totalCarCost: totalCarCost,
+            downPayment: totalCarCost,
             loanAmount: 0,
             monthlyPayment: 0,
-            totalPayment: carPrice,
+            totalPayment: totalCarCost,
             totalInterest: 0
         };
     }
@@ -225,10 +259,13 @@ function calculateMonthlyPayment(carPrice, installmentInfo) {
     if (installmentInfo.annualRate === 0) {
         // 무이자 할부
         return {
+            carPrice: carPrice,
+            registrationTax: registrationTax,
+            totalCarCost: totalCarCost,
             downPayment: downPayment,
             loanAmount: loanAmount,
             monthlyPayment: loanAmount / installmentInfo.months,
-            totalPayment: carPrice,
+            totalPayment: totalCarCost,
             totalInterest: 0
         };
     }
@@ -242,9 +279,12 @@ function calculateMonthlyPayment(carPrice, installmentInfo) {
         (Math.pow(1 + monthlyRate, installmentInfo.months) - 1);
     
     const totalPayment = downPayment + (monthlyPayment * installmentInfo.months);
-    const totalInterest = totalPayment - carPrice;
+    const totalInterest = totalPayment - totalCarCost;
     
     return {
+        carPrice: carPrice,
+        registrationTax: registrationTax,
+        totalCarCost: totalCarCost,
         downPayment: downPayment,
         loanAmount: loanAmount,
         monthlyPayment: monthlyPayment,
@@ -309,10 +349,24 @@ function calculateMaintenanceCost(car, monthlyKm = 1000) {
 function recommendCar() {
     const salaryInput = document.getElementById('salary');
     const salary = parseInt(salaryInput.value);
+    const button = document.querySelector('button[onclick="recommendCar()"]');
+    const resultSection = document.getElementById('result');
     
     if (!salary || salary <= 0) {
         alert('올바른 연봉을 입력해주세요.');
         return;
+    }
+    
+    // 버튼 로딩 상태 표시
+    const originalText = button.innerHTML;
+    button.innerHTML = '🔄 계산 중...';
+    button.disabled = true;
+    button.style.opacity = '0.7';
+    
+    // 기존 결과 페이드 아웃
+    if (!resultSection.classList.contains('hidden')) {
+        resultSection.style.opacity = '0.3';
+        resultSection.style.transition = 'opacity 0.3s ease';
     }
     
     const taxInfo = calculateAfterTaxIncome(salary);
@@ -331,7 +385,7 @@ function recommendCar() {
         const minMonthlyCarCostManwon = monthlyAvailableIncomeManwon * 0.25; // 월 가용 소득의 25%부터
         
         recommendedCars = carDatabase.filter(car => {
-            const payment = calculateMonthlyPayment(car.price, installmentInfo);
+            const payment = calculateMonthlyPayment(car.price, installmentInfo, car.fuelType);
             const maintenance = calculateMaintenanceCost(car);
             // 단위 통일: payment.monthlyPayment (만원) + maintenance.totalWon (원을 만원으로 변환)
             const totalMonthlyCostManwon = payment ? payment.monthlyPayment + (maintenance.totalWon / 10000) : 0;
@@ -339,7 +393,7 @@ function recommendCar() {
         });
         
         affordableCars = carDatabase.filter(car => {
-            const payment = calculateMonthlyPayment(car.price, installmentInfo);
+            const payment = calculateMonthlyPayment(car.price, installmentInfo, car.fuelType);
             const maintenance = calculateMaintenanceCost(car);
             // 단위 통일: payment.monthlyPayment (만원) + maintenance.totalWon (원을 만원으로 변환)
             const totalMonthlyCostManwon = payment ? payment.monthlyPayment + (maintenance.totalWon / 10000) : 0;
@@ -352,25 +406,30 @@ function recommendCar() {
         
         recommendedCars = carDatabase.filter(car => {
             const maintenance = calculateMaintenanceCost(car);
-            const carPriceManwon = car.price; // 명시적 단위 표시
-            return carPriceManwon >= availableIncomeManwon * 0.5 && 
-                   carPriceManwon <= availableIncomeManwon * 0.7 &&
+            const registrationTax = calculateRegistrationTax(car.price, car.fuelType);
+            const totalCarCostManwon = car.price + registrationTax.totalTaxManwon; // 차량가격 + 취등록세
+            return totalCarCostManwon >= availableIncomeManwon * 0.5 && 
+                   totalCarCostManwon <= availableIncomeManwon * 0.7 &&
                    maintenance.totalWon <= maxMonthlyMaintenanceManwon * 10000; // 만원을 원으로 변환하여 비교
         });
         
         affordableCars = carDatabase.filter(car => {
             const maintenance = calculateMaintenanceCost(car);
-            const carPriceManwon = car.price; // 명시적 단위 표시
-            return carPriceManwon < availableIncomeManwon * 0.5 && 
-                   carPriceManwon >= availableIncomeManwon * 0.35 &&
+            const registrationTax = calculateRegistrationTax(car.price, car.fuelType);
+            const totalCarCostManwon = car.price + registrationTax.totalTaxManwon; // 차량가격 + 취등록세
+            return totalCarCostManwon < availableIncomeManwon * 0.5 && 
+                   totalCarCostManwon >= availableIncomeManwon * 0.35 &&
                    maintenance.totalWon <= maxMonthlyMaintenanceManwon * 10000; // 만원을 원으로 변환하여 비교
         });
     }
     
-    displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedExpenses, installmentInfo);
+    // 약간의 지연 후 결과 표시 (로딩 효과)
+    setTimeout(() => {
+        displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedExpenses, installmentInfo, button, originalText);
+    }, 500);
 }
 
-function displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedExpenses, installmentInfo) {
+function displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedExpenses, installmentInfo, button, originalText) {
     const resultSection = document.getElementById('result');
     const carList = document.getElementById('carList');
     
@@ -493,7 +552,36 @@ function displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedE
         }
     }
     
+    // 결과 섹션 표시 및 애니메이션
     resultSection.classList.remove('hidden');
+    resultSection.style.opacity = '1';
+    resultSection.style.transition = 'opacity 0.5s ease';
+    
+    // 버튼 상태 복원
+    if (button && originalText) {
+        button.innerHTML = originalText;
+        button.disabled = false;
+        button.style.opacity = '1';
+    }
+    
+    // 성공 피드백과 함께 부드러운 스크롤
+    setTimeout(() => {
+        // 버튼을 잠깐 하이라이트
+        button.style.backgroundColor = '#27ae60';
+        button.innerHTML = '✅ 완료!';
+        
+        setTimeout(() => {
+            button.style.backgroundColor = '#3498db';
+            button.innerHTML = originalText;
+            button.style.transition = 'background-color 0.3s ease';
+        }, 1000);
+        
+        // 결과로 부드럽게 스크롤
+        resultSection.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'start' 
+        });
+    }, 100);
 }
 
 function createCarItem(car, isRecommended, installmentInfo) {
@@ -508,8 +596,27 @@ function createCarItem(car, isRecommended, installmentInfo) {
     // 유니크한 ID 생성 (차 이름 기반)
     const carId = car.name.replace(/\s+/g, '-').toLowerCase();
     
+    // 연료 타입에 따른 아이콘과 색상
+    let fuelTypeIcon = '';
+    let fuelTypeClass = '';
+    let borderColor = '';
+    
+    if (car.fuelType === 'electric') {
+        fuelTypeIcon = '⚡';
+        fuelTypeClass = 'electric-car';
+        borderColor = '#2ecc71'; // 녹색
+    } else if (car.fuelType === 'diesel') {
+        fuelTypeIcon = '🛢️';
+        fuelTypeClass = 'diesel-car';
+        borderColor = '#34495e'; // 어두운 회색
+    } else {
+        fuelTypeIcon = '⛽';
+        fuelTypeClass = 'gasoline-car';
+        borderColor = '#e74c3c'; // 빨간색
+    }
+    
     if (installmentInfo && installmentInfo.months > 0) {
-        payment = calculateMonthlyPayment(car.price, installmentInfo);
+        payment = calculateMonthlyPayment(car.price, installmentInfo, car.fuelType);
         if (payment) {
             monthlyPaymentHtml = `<div style="font-weight: 600; color: #e74c3c; margin-top: 5px;">💳 월 납입금: ${Math.round(payment.monthlyPayment).toLocaleString()}만원</div>`;
             
@@ -520,6 +627,14 @@ function createCarItem(car, isRecommended, installmentInfo) {
                             <div class="installment-row">
                                 <span>차량 가격:</span>
                                 <span>${car.price.toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>취등록세:</span>
+                                <span>${payment.registrationTax.totalTaxManwon.toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row" style="font-weight: 600; border-top: 1px solid #ddd; padding-top: 8px; margin-top: 5px;">
+                                <span>총 차량비용:</span>
+                                <span>${Math.round(payment.totalCarCost).toLocaleString()}만원</span>
                             </div>
                             <div class="installment-row">
                                 <span>선납금 (${installmentInfo.downPaymentPercent}%):</span>
@@ -606,9 +721,18 @@ function createCarItem(car, isRecommended, installmentInfo) {
     `;
     
     return `
-        <div class="car-item" style="${isRecommended ? '' : 'border-left-color: #f39c12;'}">
-            <div class="car-name">${car.name}</div>
-            <div class="car-price">${car.price.toLocaleString()}만원</div>
+        <div class="car-item ${fuelTypeClass}" style="border-left-color: ${borderColor};">
+            <div class="car-header">
+                <div class="car-name">${car.name}</div>
+                <div class="fuel-type-badge">
+                    <span class="fuel-icon">${fuelTypeIcon}</span>
+                    <span class="fuel-text">${car.fuelType === 'electric' ? '전기차' : car.fuelType === 'diesel' ? '디젤' : '가솔린'}</span>
+                </div>
+            </div>
+            <div class="car-price">
+                ${car.price.toLocaleString()}만원 
+                <span class="tax-info">(+취등록세 ${calculateRegistrationTax(car.price, car.fuelType).totalTaxManwon.toLocaleString()}만원)</span>
+            </div>
             <div class="car-category">${car.category}</div>
             ${monthlyPaymentHtml}
             ${maintenanceSummaryHtml}

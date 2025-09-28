@@ -554,7 +554,7 @@ button:active:not(:disabled) {
     }
     
     .tab-text {
-        display: none;
+        font-size: 0.85em;
     }
     
     body {

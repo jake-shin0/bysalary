@@ -782,7 +782,7 @@ function showPage(pageType) {
     // 클릭된 탭 찾아서 활성화
     document.querySelectorAll('.nav-tab').forEach(tab => {
         if ((pageType === 'car' && tab.textContent.includes('차량')) || 
-            (pageType === 'apartment' && tab.textContent.includes('부동산'))) {
+            (pageType === 'apartment' && tab.textContent.includes('아파트'))) {
             tab.classList.add('active');
         }
     });

@@ -633,11 +633,63 @@ function toggleDetail(elementId) {
     }
 }
 
+// 페이지 전환 기능
+function showPage(pageType) {
+    // 모든 페이지 숨기기
+    document.getElementById('car-page').style.display = 'none';
+    document.getElementById('apartment-page').style.display = 'none';
+    
+    // SEO 콘텐츠 제어
+    const carSeoContent = document.getElementById('car-seo-content');
+    if (pageType === 'car') {
+        carSeoContent.style.display = 'block';
+    } else {
+        carSeoContent.style.display = 'none';
+    }
+    
+    // 선택된 페이지 보이기
+    document.getElementById(pageType + '-page').style.display = 'block';
+    
+    // 네비게이션 활성화 상태 업데이트
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    // 클릭된 메뉴 활성화
+    event.target.classList.add('active');
+    
+    // 모바일에서 사이드바 닫기
+    if (window.innerWidth <= 768) {
+        toggleSidebar();
+    }
+}
+
+// 사이드바 토글 (모바일용)
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('open');
+}
+
 // 전역으로 함수 노출
 window.toggleDetail = toggleDetail;
+window.showPage = showPage;
+window.toggleSidebar = toggleSidebar;
 
 document.getElementById('salary').addEventListener('keypress', function(event) {
     if (event.key === 'Enter') {
         recommendCar();
+    }
+});
+
+// 사이드바 외부 클릭 시 닫기 (모바일)
+document.addEventListener('click', function(event) {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    
+    if (window.innerWidth <= 768 && 
+        !sidebar.contains(event.target) && 
+        !menuBtn.contains(event.target) && 
+        sidebar.classList.contains('open')) {
+        sidebar.classList.remove('open');
     }
 });

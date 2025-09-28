@@ -791,7 +791,23 @@ function showPage(pageType) {
 // 사이드바 토글 (모바일용)
 function toggleSidebar() {
     const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    const menuIcon = document.getElementById('menu-icon');
+    const body = document.body;
+    
     sidebar.classList.toggle('open');
+    
+    if (sidebar.classList.contains('open')) {
+        overlay.style.display = 'block';
+        setTimeout(() => overlay.classList.add('active'), 10);
+        menuIcon.textContent = '✕';
+        body.style.overflow = 'hidden';
+    } else {
+        overlay.classList.remove('active');
+        setTimeout(() => overlay.style.display = 'none', 300);
+        menuIcon.textContent = '☰';
+        body.style.overflow = '';
+    }
 }
 
 // 전역으로 함수 노출

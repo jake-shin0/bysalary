@@ -82,16 +82,46 @@ body {
 .mobile-menu-btn {
     display: none;
     position: fixed;
-    top: 20px;
-    left: 20px;
+    top: 10px;
+    left: 10px;
     z-index: 1001;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 10px 15px;
-    font-size: 18px;
+    background-color: white;
+    color: #2c3e50;
+    border: 2px solid #e0e0e0;
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
     cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.mobile-menu-btn:hover {
+    background-color: #f8f9fa;
+    transform: scale(1.05);
+}
+
+.mobile-menu-btn:active {
+    transform: scale(0.95);
+}
+
+/* 모바일 배경 오버레이 */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.sidebar-overlay.active {
+    opacity: 1;
 }
 
 /* 페이지 콘텐츠 */
@@ -533,6 +563,16 @@ button:active:not(:disabled) {
     }
     
     .mobile-menu-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .sidebar-overlay {
+        display: none;
+    }
+    
+    .sidebar-overlay.active {
         display: block;
     }
     

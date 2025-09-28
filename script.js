@@ -498,47 +498,57 @@ function displayResults(recommendedCars, affordableCars, salary, taxInfo, fixedE
 
 function createCarItem(car, isRecommended, installmentInfo) {
     const maintenance = calculateMaintenanceCost(car);
-    let installmentHtml = '';
     let payment = null;
+    let monthlyPaymentHtml = '';
+    let maintenanceSummaryHtml = '';
+    let toggleButtonsHtml = '';
+    let installmentDetailHtml = '';
+    let maintenanceDetailHtml = '';
+    
+    // 유니크한 ID 생성 (차 이름 기반)
+    const carId = car.name.replace(/\s+/g, '-').toLowerCase();
     
     if (installmentInfo && installmentInfo.months > 0) {
         payment = calculateMonthlyPayment(car.price, installmentInfo);
         if (payment) {
-            installmentHtml = `
-                <div class="installment-info-box">
-                    <h4>💳 할부 정보</h4>
-                    <div class="installment-details">
-                        <div class="installment-row">
-                            <span>차량 가격:</span>
-                            <span>${car.price.toLocaleString()}만원</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>선납금 (${installmentInfo.downPaymentPercent}%):</span>
-                            <span>${Math.round(payment.downPayment).toLocaleString()}만원</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>대출 원금:</span>
-                            <span>${Math.round(payment.loanAmount).toLocaleString()}만원</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>할부 개월:</span>
-                            <span>${installmentInfo.months}개월</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>연 이자율:</span>
-                            <span>${installmentInfo.annualRate}%</span>
-                        </div>
-                        <div class="installment-row monthly-payment">
-                            <span>월 납입금:</span>
-                            <span>${Math.round(payment.monthlyPayment).toLocaleString()}만원</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>총 납입금:</span>
-                            <span>${Math.round(payment.totalPayment).toLocaleString()}만원</span>
-                        </div>
-                        <div class="installment-row">
-                            <span>총 이자:</span>
-                            <span>${Math.round(payment.totalInterest).toLocaleString()}만원</span>
+            monthlyPaymentHtml = `<div style="font-weight: 600; color: #e74c3c; margin-top: 5px;">💳 월 납입금: ${Math.round(payment.monthlyPayment).toLocaleString()}만원</div>`;
+            
+            installmentDetailHtml = `
+                <div id="installment-${carId}" class="toggle-content" style="display: none;">
+                    <div class="installment-info-box">
+                        <div class="installment-details">
+                            <div class="installment-row">
+                                <span>차량 가격:</span>
+                                <span>${car.price.toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>선납금 (${installmentInfo.downPaymentPercent}%):</span>
+                                <span>${Math.round(payment.downPayment).toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>대출 원금:</span>
+                                <span>${Math.round(payment.loanAmount).toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>할부 개월:</span>
+                                <span>${installmentInfo.months}개월</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>연 이자율:</span>
+                                <span>${installmentInfo.annualRate}%</span>
+                            </div>
+                            <div class="installment-row monthly-payment">
+                                <span>월 납입금:</span>
+                                <span>${Math.round(payment.monthlyPayment).toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>총 납입금:</span>
+                                <span>${Math.round(payment.totalPayment).toLocaleString()}만원</span>
+                            </div>
+                            <div class="installment-row">
+                                <span>총 이자:</span>
+                                <span>${Math.round(payment.totalInterest).toLocaleString()}만원</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -546,14 +556,13 @@ function createCarItem(car, isRecommended, installmentInfo) {
         }
     }
     
-    return `
-        <div class="car-item" style="${isRecommended ? '' : 'border-left-color: #f39c12;'}">
-            <div class="car-name">${car.name}</div>
-            <div class="car-price">${car.price.toLocaleString()}만원</div>
-            <div class="car-category">${car.category}</div>
-            ${installmentHtml}
+    // 유지비 요약
+    maintenanceSummaryHtml = `<div style="font-weight: 600; color: #3498db; margin-top: 5px;">🔧 월 유지비: ${(maintenance.totalWon / 10000).toFixed(1)}만원</div>`;
+    
+    // 유지비 상세 정보
+    maintenanceDetailHtml = `
+        <div id="maintenance-${carId}" class="toggle-content" style="display: none;">
             <div class="maintenance-info-box">
-                <h4>🔧 월 예상 유지비</h4>
                 <div class="maintenance-details">
                     <div class="maintenance-row">
                         <span>⛽ 연료비 (월 1,000km 기준):</span>
@@ -581,7 +590,51 @@ function createCarItem(car, isRecommended, installmentInfo) {
             </div>
         </div>
     `;
+    
+    // 토글 버튼 생성
+    toggleButtonsHtml = `
+        <div class="toggle-buttons" style="margin-top: 15px; display: flex; gap: 10px;">
+            ${installmentInfo && installmentInfo.months > 0 && payment ? 
+                `<button onclick="toggleDetail('installment-${carId}')" class="toggle-btn">
+                    💳 할부 상세보기 <span id="arrow-installment-${carId}">▼</span>
+                </button>` : ''
+            }
+            <button onclick="toggleDetail('maintenance-${carId}')" class="toggle-btn">
+                🔧 유지비 상세보기 <span id="arrow-maintenance-${carId}">▼</span>
+            </button>
+        </div>
+    `;
+    
+    return `
+        <div class="car-item" style="${isRecommended ? '' : 'border-left-color: #f39c12;'}">
+            <div class="car-name">${car.name}</div>
+            <div class="car-price">${car.price.toLocaleString()}만원</div>
+            <div class="car-category">${car.category}</div>
+            ${monthlyPaymentHtml}
+            ${maintenanceSummaryHtml}
+            ${toggleButtonsHtml}
+            ${installmentDetailHtml}
+            ${maintenanceDetailHtml}
+        </div>
+    `;
 }
+
+// 토글 기능
+function toggleDetail(elementId) {
+    const element = document.getElementById(elementId);
+    const arrow = document.getElementById(`arrow-${elementId}`);
+    
+    if (element.style.display === 'none' || element.style.display === '') {
+        element.style.display = 'block';
+        arrow.textContent = '▲';
+    } else {
+        element.style.display = 'none';
+        arrow.textContent = '▼';
+    }
+}
+
+// 전역으로 함수 노출
+window.toggleDetail = toggleDetail;
 
 document.getElementById('salary').addEventListener('keypress', function(event) {
     if (event.key === 'Enter') {

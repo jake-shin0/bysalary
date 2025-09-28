@@ -456,6 +456,43 @@ button:hover {
     color: #1976d2;
 }
 
+.toggle-btn {
+    background-color: #ecf0f1;
+    border: 1px solid #bdc3c7;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: all 0.3s;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.toggle-btn:hover {
+    background-color: #d5dbdb;
+    border-color: #95a5a6;
+}
+
+.toggle-btn:active {
+    transform: translateY(1px);
+}
+
+.toggle-content {
+    margin-top: 15px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @media (max-width: 600px) {
     .installment-grid {
         grid-template-columns: 1fr;
@@ -463,5 +500,14 @@ button:hover {
     
     .installment-item {
         padding: 12px;
+    }
+    
+    .toggle-buttons {
+        flex-direction: column;
+    }
+    
+    .toggle-btn {
+        width: 100%;
+        text-align: center;
     }
 }

@@ -1,9 +1,0 @@
-{
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "destination": "https://salaryguide.co.kr/$1",
-      "permanent": true
-    }
-  ]
-}

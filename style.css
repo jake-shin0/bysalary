@@ -1220,3 +1220,73 @@ button:active:not(:disabled) {
     margin-bottom: 8px;
 }
 
+/* 개발 진행 중 안내 */
+.development-notice {
+    background-color: #fff4e5;
+    border: 1px solid #ffd8a8;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 20px 0 30px 0;
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.notice-icon {
+    font-size: 2.5em;
+    flex-shrink: 0;
+}
+
+.notice-content {
+    flex: 1;
+}
+
+.notice-content h4 {
+    margin: 0 0 8px 0;
+    color: #e67700;
+    font-size: 1.2em;
+}
+
+.notice-content p {
+    margin: 0 0 15px 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+.upcoming-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.feature-tag {
+    background-color: #ffe4cc;
+    color: #cc5500;
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+@media (max-width: 768px) {
+    .development-notice {
+        flex-direction: column;
+        gap: 15px;
+        padding: 15px;
+    }
+    
+    .notice-icon {
+        font-size: 2em;
+    }
+    
+    .upcoming-features {
+        gap: 5px;
+    }
+    
+    .feature-tag {
+        font-size: 0.8em;
+        padding: 3px 10px;
+    }
+}
+

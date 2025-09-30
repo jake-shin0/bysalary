@@ -870,7 +870,6 @@ function selectPurchaseType(type) {
 function recommendApartment() {
     const availableCash = parseInt(document.getElementById('available-cash').value) || 0;
     const salary = parseInt(document.getElementById('apt-salary').value) || 0;
-    const existingDebt = parseInt(document.getElementById('existing-debt').value) || 0;
     
     if (!availableCash || !salary) {
         alert('가용 현금과 연봉을 입력해주세요.');
@@ -883,9 +882,16 @@ function recommendApartment() {
     const interestRate = 0.045; // 연 4.5% 가정
     const loanTerm = 30; // 30년 대출
     
-    // 기존 부채 월 상환액 (원금의 0.5% 가정)
-    const existingMonthlyPayment = existingDebt * 0.005;
-    const availableMonthlyPayment = Math.max(0, maxMonthlyPayment - existingMonthlyPayment);
+    // 기존 부채의 월 상환액 계산
+    let totalExistingMonthlyPayment = 0;
+    debtList.forEach(debt => {
+        if (debt.amount > 0 && debt.rate > 0 && debt.term > 0) {
+            const monthlyPayment = calculateMonthlyPaymentForApt(debt.amount, debt.rate / 100, debt.term);
+            totalExistingMonthlyPayment += monthlyPayment;
+        }
+    });
+    
+    const availableMonthlyPayment = Math.max(0, maxMonthlyPayment - totalExistingMonthlyPayment);
     
     // 대출 가능 금액 계산
     const maxLoanAmount = calculateMaxLoanForApt(availableMonthlyPayment, interestRate, loanTerm);
@@ -904,7 +910,9 @@ function recommendApartment() {
         availableCash,
         maxLoanAmount,
         maxApartmentPrice,
-        monthlyPayment: availableMonthlyPayment
+        monthlyPayment: availableMonthlyPayment,
+        salary,
+        totalExistingPayment: totalExistingMonthlyPayment
     });
 }
 
@@ -928,6 +936,9 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
     aptList.innerHTML = '';
     
     // 대출 정보 요약
+    const monthlyIncome = loanInfo.salary / 12;
+    const existingDebtPayment = Math.round(loanInfo.totalExistingPayment);
+    
     aptList.innerHTML += `
         <div class="loan-summary budget-summary">
             <h3>💰 구매 가능 정보</h3>
@@ -937,16 +948,30 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                     <span>${loanInfo.availableCash.toLocaleString()}만원</span>
                 </div>
                 <div class="budget-row">
+                    <span>월 소득:</span>
+                    <span>${Math.round(monthlyIncome).toLocaleString()}만원</span>
+                </div>
+                <div class="budget-row">
+                    <span>DSR 한도 (40%):</span>
+                    <span>${Math.round(monthlyIncome * 0.4).toLocaleString()}만원</span>
+                </div>
+                ${existingDebtPayment > 0 ? `
+                <div class="budget-row" style="color: #e74c3c;">
+                    <span>기존 부채 상환액:</span>
+                    <span>-${existingDebtPayment.toLocaleString()}만원</span>
+                </div>
+                ` : ''}
+                <div class="budget-row">
+                    <span>신규 대출 가능 상환액:</span>
+                    <span>${Math.round(loanInfo.monthlyPayment).toLocaleString()}만원</span>
+                </div>
+                <div class="budget-row">
                     <span>최대 대출 가능액:</span>
                     <span>${loanInfo.maxLoanAmount.toLocaleString()}만원</span>
                 </div>
                 <div class="budget-row available">
                     <span>총 구매 가능 금액:</span>
                     <span>${loanInfo.maxApartmentPrice.toLocaleString()}만원</span>
-                </div>
-                <div class="budget-row">
-                    <span>예상 월 상환액:</span>
-                    <span>${Math.round(loanInfo.monthlyPayment).toLocaleString()}만원</span>
                 </div>
             </div>
         </div>
@@ -1016,6 +1041,86 @@ function calculateMonthlyPaymentForApt(principal, annualRate, years) {
            (Math.pow(1 + monthlyRate, totalMonths) - 1);
 }
 
+// 부채 리스트 관리
+let debtList = [];
+let debtCounter = 0;
+
+function addDebtItem() {
+    const debtListEl = document.getElementById('debt-list');
+    const debtId = `debt-${debtCounter++}`;
+    
+    const debtItem = {
+        id: debtId,
+        amount: 0,
+        rate: 0,
+        term: 0
+    };
+    
+    debtList.push(debtItem);
+    
+    // 빈 상태 제거
+    const emptyState = debtListEl.querySelector('.debt-empty-state');
+    if (emptyState) {
+        emptyState.remove();
+    }
+    
+    // 새 부채 아이템 추가
+    const debtItemEl = document.createElement('div');
+    debtItemEl.className = 'debt-item';
+    debtItemEl.id = debtId;
+    debtItemEl.innerHTML = `
+        <div class="debt-item-header">
+            <div class="debt-item-title">부채 ${debtList.length}</div>
+            <button type="button" class="remove-debt-btn" onclick="removeDebtItem('${debtId}')">삭제</button>
+        </div>
+        <div class="debt-input-grid">
+            <div class="debt-input-item">
+                <label>대출 금액</label>
+                <div class="input-wrapper">
+                    <input type="number" id="${debtId}-amount" placeholder="10000" onchange="updateDebtItem('${debtId}', 'amount', this.value)" />
+                    <span class="unit">만원</span>
+                </div>
+            </div>
+            <div class="debt-input-item">
+                <label>연이자율</label>
+                <div class="input-wrapper">
+                    <input type="number" id="${debtId}-rate" placeholder="5.5" step="0.1" onchange="updateDebtItem('${debtId}', 'rate', this.value)" />
+                    <span class="unit">%</span>
+                </div>
+            </div>
+            <div class="debt-input-item">
+                <label>남은 상환기간</label>
+                <div class="input-wrapper">
+                    <input type="number" id="${debtId}-term" placeholder="20" onchange="updateDebtItem('${debtId}', 'term', this.value)" />
+                    <span class="unit">년</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    debtListEl.appendChild(debtItemEl);
+}
+
+function removeDebtItem(debtId) {
+    debtList = debtList.filter(debt => debt.id !== debtId);
+    document.getElementById(debtId).remove();
+    
+    if (debtList.length === 0) {
+        const debtListEl = document.getElementById('debt-list');
+        debtListEl.innerHTML = '<div class="debt-empty-state"><p>등록된 부채가 없습니다.</p></div>';
+    }
+}
+
+function updateDebtItem(debtId, field, value) {
+    const debt = debtList.find(d => d.id === debtId);
+    if (debt) {
+        debt[field] = parseFloat(value) || 0;
+    }
+}
+
 // 전역 함수 추가
 window.selectPurchaseType = selectPurchaseType;
 window.recommendApartment = recommendApartment;
+window.addDebtItem = addDebtItem;
+window.removeDebtItem = removeDebtItem;
+window.updateDebtItem = updateDebtItem;

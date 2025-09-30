@@ -221,11 +221,15 @@
                     <span class="unit">만원</span>
                 </div>
                 
-                <label for="existing-debt" style="margin-top: 20px;">기존 부채 (주택담보대출, 신용대출 등)</label>
-                <div class="input-wrapper">
-                    <input type="number" id="existing-debt" placeholder="예: 10000" />
-                    <span class="unit">만원</span>
+                <label style="margin-top: 20px;">기존 부채 현황</label>
+                <div class="debt-list" id="debt-list">
+                    <div class="debt-empty-state">
+                        <p>등록된 부채가 없습니다.</p>
+                    </div>
                 </div>
+                <button type="button" class="add-debt-btn" onclick="addDebtItem()">
+                    + 부채 추가
+                </button>
                 
                 <button onclick="recommendApartment()" style="margin-top: 30px;">아파트 추천받기</button>
             </div>

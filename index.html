@@ -179,24 +179,53 @@
         
         <!-- 아파트 추천 페이지 -->
         <div id="apartment-page" class="page-content" style="display: none;">
-            <div class="coming-soon">
-                <h1>🏠 연봉별 아파트 추천 서비스</h1>
-                <div class="coming-soon-content">
-                    <div class="coming-soon-icon">🏗️</div>
-                    <h2>서비스 준비중입니다</h2>
-                    <p>연봉에 맞는 적정 아파트/주택을 추천하는 서비스를 개발 중입니다.</p>
-                    <div class="coming-soon-features">
-                        <h3>📋 준비중인 기능들</h3>
-                        <ul>
-                            <li>🏘️ 지역별 아파트 가격 데이터</li>
-                            <li>🏦 대출 한도 및 조건 계산</li>
-                            <li>💰 월세 vs 전세 비교 분석</li>
-                            <li>📍 교통비 및 생활비 고려</li>
-                            <li>📈 향후 시세 전망</li>
-                        </ul>
-                    </div>
-                    <p class="coming-soon-note">빠른 시일 내에 서비스를 제공할 예정입니다. 기대해 주세요! 🎯</p>
+            <h1>🏠 연봉별 아파트 추천 서비스</h1>
+            
+            <div class="purchase-type-selector">
+                <button class="purchase-type-btn active" onclick="selectPurchaseType('purchase')">
+                    💰 매매
+                </button>
+                <button class="purchase-type-btn" onclick="selectPurchaseType('gap-investment')">
+                    📊 갭투자
+                </button>
+            </div>
+            
+            <!-- 매매 방식 입력 폼 -->
+            <div id="purchase-form" class="input-section">
+                <h3>💳 매매를 위한 정보 입력</h3>
+                
+                <label for="available-cash">가용 현금</label>
+                <div class="input-wrapper">
+                    <input type="number" id="available-cash" placeholder="예: 5000" />
+                    <span class="unit">만원</span>
                 </div>
+                
+                <label for="apt-salary" style="margin-top: 20px;">연봉</label>
+                <div class="input-wrapper">
+                    <input type="number" id="apt-salary" placeholder="예: 5000" />
+                    <span class="unit">만원</span>
+                </div>
+                
+                <label for="existing-debt" style="margin-top: 20px;">기존 부채 (주택담보대출, 신용대출 등)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="existing-debt" placeholder="예: 10000" />
+                    <span class="unit">만원</span>
+                </div>
+                
+                <button onclick="recommendApartment()" style="margin-top: 30px;">아파트 추천받기</button>
+            </div>
+            
+            <!-- 갭투자 방식 입력 폼 -->
+            <div id="gap-investment-form" class="input-section" style="display: none;">
+                <h3>📊 갭투자를 위한 정보 입력</h3>
+                <div class="coming-soon-content">
+                    <p>갭투자 추천 기능은 준비 중입니다.</p>
+                </div>
+            </div>
+            
+            <div id="apt-result" class="result-section hidden">
+                <h2>추천 아파트</h2>
+                <div id="aptList" class="apt-list"></div>
             </div>
         </div>
         

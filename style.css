@@ -1110,3 +1110,113 @@ button:active:not(:disabled) {
     }
 }
 
+/* 아파트 추천 스타일 */
+.purchase-type-selector {
+    display: flex;
+    gap: 10px;
+    margin: 30px 0;
+    justify-content: center;
+}
+
+.purchase-type-btn {
+    flex: 1;
+    max-width: 200px;
+    padding: 15px 25px;
+    font-size: 1.1em;
+    background-color: #ecf0f1;
+    color: #2c3e50;
+    border: 2px solid #bdc3c7;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 600;
+}
+
+.purchase-type-btn:hover {
+    background-color: #d5dbdb;
+    transform: translateY(-2px);
+}
+
+.purchase-type-btn.active {
+    background-color: #3498db;
+    color: white;
+    border-color: #3498db;
+}
+
+.apt-list {
+    margin-bottom: 30px;
+}
+
+.apt-item {
+    background-color: #f8f9fa;
+    padding: 0;
+    margin-bottom: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+    position: relative;
+    overflow: hidden;
+}
+
+.apt-content-wrapper {
+    display: flex;
+    gap: 20px;
+}
+
+.apt-image {
+    width: 200px;
+    height: 150px;
+    flex-shrink: 0;
+    overflow: hidden;
+    background-color: #f0f0f0;
+}
+
+.apt-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.apt-info {
+    flex: 1;
+    padding: 20px 20px 20px 0;
+}
+
+.apt-name {
+    font-size: 1.3em;
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+
+.apt-location {
+    color: #7f8c8d;
+    font-size: 0.95em;
+    margin-bottom: 5px;
+}
+
+.apt-price {
+    font-size: 1.1em;
+    color: #e74c3c;
+    font-weight: 500;
+    margin-bottom: 5px;
+}
+
+.apt-details {
+    font-size: 0.9em;
+    color: #2c3e50;
+    margin-top: 10px;
+}
+
+.loan-info {
+    background-color: #e8f5e9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+}
+
+.loan-info h4 {
+    font-size: 1em;
+    color: #2c3e50;
+    margin-bottom: 8px;
+}
+

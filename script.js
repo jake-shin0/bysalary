@@ -820,3 +820,202 @@ document.addEventListener('click', function(event) {
         sidebar.classList.remove('open');
     }
 });
+
+// 아파트 추천 기능
+const apartmentDatabase = [
+    // 서울 강남권
+    { name: "래미안 강남", location: "서울시 강남구 도곡동", price: 250000, size: "34평", year: 2018, floors: 35, image: "https://via.placeholder.com/400x300/cccccc/666666?text=래미안+강남" },
+    { name: "아크로리버파크", location: "서울시 성동구 성수동", price: 180000, size: "33평", year: 2021, floors: 40, image: "https://via.placeholder.com/400x300/cccccc/666666?text=아크로리버파크" },
+    { name: "롯데캐슬", location: "서울시 송파구 잠실동", price: 220000, size: "35평", year: 2019, floors: 38, image: "https://via.placeholder.com/400x300/cccccc/666666?text=롯데캐슬+잠실" },
+    
+    // 서울 강북권
+    { name: "북한산 아이파크", location: "서울시 은평구 불광동", price: 95000, size: "30평", year: 2017, floors: 25, image: "https://via.placeholder.com/400x300/cccccc/666666?text=북한산+아이파크" },
+    { name: "성북동 래미안", location: "서울시 성북구 성북동", price: 120000, size: "32평", year: 2020, floors: 20, image: "https://via.placeholder.com/400x300/cccccc/666666?text=성북동+래미안" },
+    
+    // 경기도
+    { name: "판교 아크로", location: "경기도 성남시 분당구 판교동", price: 150000, size: "33평", year: 2019, floors: 35, image: "https://via.placeholder.com/400x300/cccccc/666666?text=판교+아크로" },
+    { name: "동탄 메타폴리스", location: "경기도 화성시 동탄", price: 80000, size: "28평", year: 2021, floors: 30, image: "https://via.placeholder.com/400x300/cccccc/666666?text=동탄+메타폴리스" },
+    { name: "일산 자이", location: "경기도 고양시 일산동구", price: 70000, size: "25평", year: 2018, floors: 25, image: "https://via.placeholder.com/400x300/cccccc/666666?text=일산+자이" },
+    
+    // 중저가 아파트
+    { name: "수원 영통 아이파크", location: "경기도 수원시 영통구", price: 60000, size: "24평", year: 2016, floors: 20, image: "https://via.placeholder.com/400x300/cccccc/666666?text=영통+아이파크" },
+    { name: "안산 센트럴파크", location: "경기도 안산시 상록구", price: 45000, size: "22평", year: 2015, floors: 18, image: "https://via.placeholder.com/400x300/cccccc/666666?text=안산+센트럴파크" },
+    { name: "부천 중동 신도시", location: "경기도 부천시 중동", price: 50000, size: "23평", year: 2014, floors: 22, image: "https://via.placeholder.com/400x300/cccccc/666666?text=부천+중동" },
+    
+    // 초저가 아파트
+    { name: "인천 청라 호반", location: "인천시 서구 청라동", price: 38000, size: "20평", year: 2013, floors: 25, image: "https://via.placeholder.com/400x300/cccccc/666666?text=청라+호반" },
+    { name: "김포 한강신도시", location: "경기도 김포시", price: 35000, size: "19평", year: 2012, floors: 20, image: "https://via.placeholder.com/400x300/cccccc/666666?text=김포+한강신도시" }
+];
+
+// 매매/갭투자 선택
+function selectPurchaseType(type) {
+    const purchaseForm = document.getElementById('purchase-form');
+    const gapInvestmentForm = document.getElementById('gap-investment-form');
+    const purchaseBtns = document.querySelectorAll('.purchase-type-btn');
+    
+    purchaseBtns.forEach(btn => btn.classList.remove('active'));
+    
+    if (type === 'purchase') {
+        purchaseForm.style.display = 'block';
+        gapInvestmentForm.style.display = 'none';
+        purchaseBtns[0].classList.add('active');
+    } else {
+        purchaseForm.style.display = 'none';
+        gapInvestmentForm.style.display = 'block';
+        purchaseBtns[1].classList.add('active');
+    }
+}
+
+// 아파트 추천 기능
+function recommendApartment() {
+    const availableCash = parseInt(document.getElementById('available-cash').value) || 0;
+    const salary = parseInt(document.getElementById('apt-salary').value) || 0;
+    const existingDebt = parseInt(document.getElementById('existing-debt').value) || 0;
+    
+    if (!availableCash || !salary) {
+        alert('가용 현금과 연봉을 입력해주세요.');
+        return;
+    }
+    
+    // 대출 가능 금액 계산 (DSR 40% 기준)
+    const monthlyIncome = salary / 12;
+    const maxMonthlyPayment = monthlyIncome * 0.4; // DSR 40%
+    const interestRate = 0.045; // 연 4.5% 가정
+    const loanTerm = 30; // 30년 대출
+    
+    // 기존 부채 월 상환액 (원금의 0.5% 가정)
+    const existingMonthlyPayment = existingDebt * 0.005;
+    const availableMonthlyPayment = Math.max(0, maxMonthlyPayment - existingMonthlyPayment);
+    
+    // 대출 가능 금액 계산
+    const maxLoanAmount = calculateMaxLoanForApt(availableMonthlyPayment, interestRate, loanTerm);
+    
+    // 구매 가능 아파트 금액
+    const maxApartmentPrice = availableCash + maxLoanAmount;
+    
+    // 추천 아파트 필터링
+    const affordableApts = apartmentDatabase.filter(apt => apt.price <= maxApartmentPrice * 1.1); // 10% 여유
+    const recommendedApts = apartmentDatabase.filter(apt => 
+        apt.price <= maxApartmentPrice && apt.price >= maxApartmentPrice * 0.7
+    );
+    
+    // 결과 표시
+    displayApartmentResults(recommendedApts, affordableApts, {
+        availableCash,
+        maxLoanAmount,
+        maxApartmentPrice,
+        monthlyPayment: availableMonthlyPayment
+    });
+}
+
+// 최대 대출 가능 금액 계산
+function calculateMaxLoanForApt(monthlyPayment, annualRate, years) {
+    const monthlyRate = annualRate / 12;
+    const totalMonths = years * 12;
+    
+    if (monthlyRate === 0) return monthlyPayment * totalMonths;
+    
+    const maxLoan = monthlyPayment * ((1 - Math.pow(1 + monthlyRate, -totalMonths)) / monthlyRate);
+    return Math.round(maxLoan);
+}
+
+// 아파트 결과 표시
+function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
+    const aptResult = document.getElementById('apt-result');
+    const aptList = document.getElementById('aptList');
+    
+    aptResult.classList.remove('hidden');
+    aptList.innerHTML = '';
+    
+    // 대출 정보 요약
+    aptList.innerHTML += `
+        <div class="loan-summary budget-summary">
+            <h3>💰 구매 가능 정보</h3>
+            <div class="budget-details">
+                <div class="budget-row">
+                    <span>가용 현금:</span>
+                    <span>${loanInfo.availableCash.toLocaleString()}만원</span>
+                </div>
+                <div class="budget-row">
+                    <span>최대 대출 가능액:</span>
+                    <span>${loanInfo.maxLoanAmount.toLocaleString()}만원</span>
+                </div>
+                <div class="budget-row available">
+                    <span>총 구매 가능 금액:</span>
+                    <span>${loanInfo.maxApartmentPrice.toLocaleString()}만원</span>
+                </div>
+                <div class="budget-row">
+                    <span>예상 월 상환액:</span>
+                    <span>${Math.round(loanInfo.monthlyPayment).toLocaleString()}만원</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (recommendedApts.length > 0) {
+        aptList.innerHTML += '<h3 style="margin: 25px 0 15px; color: #27ae60;">💚 추천 아파트</h3>';
+        recommendedApts.forEach(apt => {
+            aptList.innerHTML += createApartmentItem(apt, loanInfo);
+        });
+    }
+    
+    if (affordableApts.length > 0 && affordableApts.length > recommendedApts.length) {
+        aptList.innerHTML += '<h3 style="margin: 25px 0 15px; color: #f39c12;">💛 대안 아파트</h3>';
+        affordableApts.filter(apt => !recommendedApts.includes(apt)).forEach(apt => {
+            aptList.innerHTML += createApartmentItem(apt, loanInfo);
+        });
+    }
+    
+    if (recommendedApts.length === 0 && affordableApts.length === 0) {
+        aptList.innerHTML += '<p>현재 조건에 맞는 아파트를 찾지 못했습니다.</p>';
+    }
+    
+    // 스크롤
+    aptResult.scrollIntoView({ behavior: 'smooth' });
+}
+
+// 아파트 아이템 생성
+function createApartmentItem(apt, loanInfo) {
+    const downPayment = Math.min(loanInfo.availableCash, apt.price);
+    const loanAmount = Math.max(0, apt.price - downPayment);
+    const monthlyPayment = calculateMonthlyPaymentForApt(loanAmount, 0.045, 30);
+    
+    return `
+        <div class="apt-item">
+            <div class="apt-content-wrapper">
+                <div class="apt-image">
+                    <img src="${apt.image}" alt="${apt.name}" loading="lazy">
+                </div>
+                <div class="apt-info">
+                    <div class="apt-name">${apt.name}</div>
+                    <div class="apt-location">📍 ${apt.location}</div>
+                    <div class="apt-price">${apt.price.toLocaleString()}만원</div>
+                    <div class="apt-details">
+                        면적: ${apt.size} | ${apt.year}년 준공 | ${apt.floors}층
+                    </div>
+                    <div class="loan-info">
+                        <h4>💳 구매 시 예상 비용</h4>
+                        <p>계약금/중도금: ${downPayment.toLocaleString()}만원</p>
+                        <p>대출 필요액: ${loanAmount.toLocaleString()}만원</p>
+                        <p>월 상환액: ${Math.round(monthlyPayment).toLocaleString()}만원</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// 월 상환액 계산
+function calculateMonthlyPaymentForApt(principal, annualRate, years) {
+    const monthlyRate = annualRate / 12;
+    const totalMonths = years * 12;
+    
+    if (monthlyRate === 0) return principal / totalMonths;
+    
+    return principal * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
+           (Math.pow(1 + monthlyRate, totalMonths) - 1);
+}
+
+// 전역 함수 추가
+window.selectPurchaseType = selectPurchaseType;
+window.recommendApartment = recommendApartment;

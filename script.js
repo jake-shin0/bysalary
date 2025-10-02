@@ -899,11 +899,18 @@ function recommendApartment() {
     // LTV 기준 계산 (주택 가격 기준)
     // 서울 투기과열지구: 40%, 비규제지역: 70%
     const ltvRatio = 0.6; // 평균 60% 적용
+    const ltvMaxLoan = 60000; // LTV 최대 한도 6억(만원)
     
     // LTV를 고려한 최대 주택 가격
     // 주택가격 = 가용현금 / (1 - LTV비율)
     const maxPriceByLTV = Math.floor(availableCash / (1 - ltvRatio));
-    const maxLoanByLTV = Math.floor(maxPriceByLTV * ltvRatio);
+    let maxLoanByLTV = Math.floor(maxPriceByLTV * ltvRatio);
+    
+    // LTV 6억 한도 적용
+    const isLTVCapped = maxLoanByLTV > ltvMaxLoan;
+    if (isLTVCapped) {
+        maxLoanByLTV = ltvMaxLoan;
+    }
     
     // DSR과 LTV 중 더 작은 대출금액 적용
     const maxLoanAmount = Math.min(maxLoanByDSR, maxLoanByLTV);
@@ -916,8 +923,12 @@ function recommendApartment() {
         // DSR이 제약사항인 경우
         maxApartmentPrice = availableCash + maxLoanByDSR;
         limitingFactor = 'DSR';
+    } else if (isLTVCapped && maxLoanByDSR > ltvMaxLoan) {
+        // LTV 6억 한도가 제약사항인 경우
+        maxApartmentPrice = availableCash + ltvMaxLoan;
+        limitingFactor = 'LTV_CAPPED';
     } else {
-        // LTV가 제약사항인 경우
+        // LTV 비율이 제약사항인 경우
         maxApartmentPrice = maxPriceByLTV;
         limitingFactor = 'LTV';
     }
@@ -940,7 +951,9 @@ function recommendApartment() {
         maxLoanByLTV,
         maxPriceByLTV,
         ltvRatio,
-        limitingFactor
+        limitingFactor,
+        isLTVCapped,
+        ltvMaxLoan
     });
 }
 
@@ -1008,13 +1021,19 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                         <span>LTV 한도:</span>
                         <span>${Math.round(loanInfo.ltvRatio * 100)}%</span>
                     </div>
+                    ${loanInfo.isLTVCapped ? `
+                    <div class="budget-row" style="color: #e67700;">
+                        <span>정책 최대 한도:</span>
+                        <span>${loanInfo.ltvMaxLoan.toLocaleString()}만원 (6억)</span>
+                    </div>
+                    ` : ''}
                     <div class="budget-row">
                         <span>LTV 기준 최대 주택가격:</span>
                         <span>${loanInfo.maxPriceByLTV.toLocaleString()}만원</span>
                     </div>
                     <div class="budget-row" style="background-color: #e8f5e9; padding: 5px; border-radius: 4px;">
                         <span>LTV 기준 최대 대출:</span>
-                        <span style="font-weight: 600;">${loanInfo.maxLoanByLTV.toLocaleString()}만원</span>
+                        <span style="font-weight: 600;">${loanInfo.maxLoanByLTV.toLocaleString()}만원${loanInfo.isLTVCapped ? ' (한도적용)' : ''}</span>
                     </div>
                 </div>
                 
@@ -1025,8 +1044,27 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                 <div style="text-align: center; color: #666; font-size: 0.9em; margin-top: 10px;">
                     ${loanInfo.limitingFactor === 'DSR' 
                         ? '⚠️ 소득 대비 상환능력(DSR)이 제한요인입니다' 
+                        : loanInfo.limitingFactor === 'LTV_CAPPED'
+                        ? '⚠️ LTV 정책 한도(6억원)가 제한요인입니다'
                         : '⚠️ 주택가격 대비 대출비율(LTV)이 제한요인입니다'}
                 </div>
+                ${loanInfo.limitingFactor === 'LTV_CAPPED' && loanInfo.maxLoanByDSR > loanInfo.ltvMaxLoan ? `
+                <div style="background-color: #fff4e5; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                    <div style="font-weight: 600; color: #e67700; margin-bottom: 8px;">💡 추가 자금 조달 가이드</div>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">
+                        DSR 기준으로는 ${loanInfo.maxLoanByDSR.toLocaleString()}만원까지 대출 가능하지만,<br>
+                        LTV 한도로 인해 ${loanInfo.ltvMaxLoan.toLocaleString()}만원만 받을 수 있습니다.
+                    </p>
+                    <p style="margin: 5px 0; color: #666; font-size: 0.9em;">
+                        추가 ${(loanInfo.maxLoanByDSR - loanInfo.ltvMaxLoan).toLocaleString()}만원은 다음 방법을 고려하세요:
+                    </p>
+                    <ul style="margin: 5px 0 0 20px; color: #666; font-size: 0.9em;">
+                        <li>신용대출 또는 전세자금대출 활용</li>
+                        <li>가족 간 증여 또는 차용</li>
+                        <li>기존 자산 매각 (주식, 펀드 등)</li>
+                    </ul>
+                </div>
+                ` : ''}
             </div>
         </div>
     `;

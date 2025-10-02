@@ -924,22 +924,44 @@ function recommendApartment() {
     // DSR과 LTV 중 더 작은 대출금액 적용
     const maxLoanAmount = Math.min(maxLoanByDSR, maxLoanByLTV);
     
-    // 최종 구매 가능 아파트 금액
-    let maxApartmentPrice;
+    // 최종 구매 가능 아파트 금액 (취득세 고려 전)
+    let maxApartmentPriceBeforeTax;
     let limitingFactor;
     
     if (maxLoanByDSR < maxLoanByLTV) {
         // DSR이 제약사항인 경우
-        maxApartmentPrice = availableCash + maxLoanByDSR;
+        maxApartmentPriceBeforeTax = availableCash + maxLoanByDSR;
         limitingFactor = 'DSR';
     } else if (isLTVCapped && maxLoanByDSR > ltvMaxLoan) {
         // LTV 6억 한도가 제약사항인 경우
-        maxApartmentPrice = availableCash + ltvMaxLoan;
+        maxApartmentPriceBeforeTax = availableCash + ltvMaxLoan;
         limitingFactor = 'LTV_CAPPED';
     } else {
         // LTV 비율이 제약사항인 경우
-        maxApartmentPrice = maxPriceByLTV;
+        maxApartmentPriceBeforeTax = maxPriceByLTV;
         limitingFactor = 'LTV';
+    }
+    
+    // 취득세를 고려한 실질 구매 가능 금액 계산
+    // 주택가격 + 취득세 = 가용현금 + 대출금액
+    // 이진 탐색으로 실제 구매 가능한 주택가격 찾기
+    let low = 0;
+    let high = maxApartmentPriceBeforeTax;
+    let maxApartmentPrice = 0;
+    let finalTaxInfo = null;
+    
+    while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        const taxInfo = calculateAcquisitionTax(mid);
+        const totalNeeded = mid + taxInfo.totalTax;
+        
+        if (totalNeeded <= maxApartmentPriceBeforeTax) {
+            maxApartmentPrice = mid;
+            finalTaxInfo = taxInfo;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
     }
     
     // 추천 아파트 필터링
@@ -953,6 +975,7 @@ function recommendApartment() {
         availableCash,
         maxLoanAmount,
         maxApartmentPrice,
+        maxApartmentPriceBeforeTax,
         monthlyPayment: availableMonthlyPayment,
         salary,
         totalExistingPayment: totalExistingMonthlyPayment,
@@ -962,7 +985,8 @@ function recommendApartment() {
         ltvRatio,
         limitingFactor,
         isLTVCapped,
-        ltvMaxLoan
+        ltvMaxLoan,
+        acquisitionTaxInfo: finalTaxInfo
     });
 }
 
@@ -1046,10 +1070,47 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                     </div>
                 </div>
                 
+                <div style="margin: 15px 0; padding: 15px 0; border-bottom: 1px solid #ddd;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">💸 취득세 계산</div>
+                    ${loanInfo.acquisitionTaxInfo ? `
+                    <div class="budget-row">
+                        <span>주택 가격:</span>
+                        <span>${loanInfo.maxApartmentPrice.toLocaleString()}만원</span>
+                    </div>
+                    <div class="budget-row">
+                        <span>취득세율:</span>
+                        <span>${loanInfo.acquisitionTaxInfo.taxRate}%</span>
+                    </div>
+                    <div class="budget-row" style="font-size: 0.9em; color: #666;">
+                        <span>취득세:</span>
+                        <span>${loanInfo.acquisitionTaxInfo.acquisitionTax.toLocaleString()}만원</span>
+                    </div>
+                    <div class="budget-row" style="font-size: 0.9em; color: #666;">
+                        <span>지방교육세:</span>
+                        <span>${loanInfo.acquisitionTaxInfo.educationTax.toLocaleString()}만원</span>
+                    </div>
+                    ${loanInfo.acquisitionTaxInfo.specialTax > 0 ? `
+                    <div class="budget-row" style="font-size: 0.9em; color: #666;">
+                        <span>농어촌특별세:</span>
+                        <span>${loanInfo.acquisitionTaxInfo.specialTax.toLocaleString()}만원</span>
+                    </div>
+                    ` : ''}
+                    <div class="budget-row" style="background-color: #fff3e0; padding: 5px; border-radius: 4px;">
+                        <span>총 취득세:</span>
+                        <span style="font-weight: 600;">${loanInfo.acquisitionTaxInfo.totalTax.toLocaleString()}만원</span>
+                    </div>
+                    ` : ''}
+                </div>
+                
                 <div class="budget-row available" style="font-size: 1.1em;">
-                    <span>최종 구매 가능 금액:</span>
+                    <span>실질 구매 가능 금액:</span>
                     <span>${loanInfo.maxApartmentPrice.toLocaleString()}만원</span>
                 </div>
+                ${loanInfo.maxApartmentPriceBeforeTax > loanInfo.maxApartmentPrice ? `
+                <div style="text-align: center; color: #e67700; font-size: 0.9em; margin-top: 5px;">
+                    ※ 취득세 ${loanInfo.acquisitionTaxInfo.totalTax.toLocaleString()}만원을 제외한 금액입니다
+                </div>
+                ` : ''}
                 <div style="text-align: center; color: #666; font-size: 0.9em; margin-top: 10px;">
                     ${loanInfo.limitingFactor === 'DSR' 
                         ? '⚠️ 소득 대비 상환능력(DSR)이 제한요인입니다' 
@@ -1102,7 +1163,9 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
 
 // 아파트 아이템 생성
 function createApartmentItem(apt, loanInfo) {
-    const downPayment = Math.min(loanInfo.availableCash, apt.price);
+    const taxInfo = calculateAcquisitionTax(apt.price);
+    const totalNeeded = apt.price + taxInfo.totalTax;
+    const downPayment = Math.min(loanInfo.availableCash - taxInfo.totalTax, apt.price);
     const loanAmount = Math.max(0, apt.price - downPayment);
     const monthlyPayment = calculateMonthlyPaymentForApt(loanAmount, 0.045, 30);
     
@@ -1115,14 +1178,21 @@ function createApartmentItem(apt, loanInfo) {
                 <div class="apt-info">
                     <div class="apt-name">${apt.name}</div>
                     <div class="apt-location">📍 ${apt.location}</div>
-                    <div class="apt-price">${apt.price.toLocaleString()}만원</div>
+                    <div class="apt-price">
+                        ${apt.price.toLocaleString()}만원
+                        <span style="font-size: 0.85em; color: #666;">
+                            (+ 취득세 ${taxInfo.totalTax.toLocaleString()}만원)
+                        </span>
+                    </div>
                     <div class="apt-details">
                         면적: ${apt.size} | ${apt.year}년 준공 | ${apt.floors}층
                     </div>
                     <div class="loan-info">
                         <h4>💳 구매 시 예상 비용</h4>
-                        <p>계약금/중도금: ${downPayment.toLocaleString()}만원</p>
-                        <p>대출 필요액: ${loanAmount.toLocaleString()}만원</p>
+                        <p>주택 가격: ${apt.price.toLocaleString()}만원</p>
+                        <p>취득세 (${taxInfo.taxRate}%): ${taxInfo.totalTax.toLocaleString()}만원</p>
+                        <p style="font-weight: 600; color: #e74c3c;">총 필요 자금: ${totalNeeded.toLocaleString()}만원</p>
+                        <p style="margin-top: 8px;">대출 필요액: ${loanAmount.toLocaleString()}만원</p>
                         <p>월 상환액: ${Math.round(monthlyPayment).toLocaleString()}만원</p>
                     </div>
                 </div>
@@ -1140,6 +1210,47 @@ function calculateMonthlyPaymentForApt(principal, annualRate, years) {
     
     return principal * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
            (Math.pow(1 + monthlyRate, totalMonths) - 1);
+}
+
+// 주택 취득세 계산
+function calculateAcquisitionTax(housePriceManwon) {
+    const priceWon = housePriceManwon * 10000; // 만원을 원으로 변환
+    let taxRate = 0;
+    
+    // 주택 취득세율 (2024년 기준)
+    // 6억 이하: 1%
+    // 6억 초과 9억 이하: 2%
+    // 9억 초과: 3%
+    if (priceWon <= 600000000) {
+        taxRate = 0.01;
+    } else if (priceWon <= 900000000) {
+        taxRate = 0.02;
+    } else {
+        taxRate = 0.03;
+    }
+    
+    // 취득세 = 주택가격 × 세율
+    const acquisitionTax = priceWon * taxRate;
+    
+    // 지방교육세 = 취득세 × 10%
+    const educationTax = acquisitionTax * 0.1;
+    
+    // 농어촌특별세 (취득세 2% 이상일 때만)
+    let specialTax = 0;
+    if (taxRate >= 0.02) {
+        specialTax = acquisitionTax * 0.2;
+    }
+    
+    // 총 세금
+    const totalTax = acquisitionTax + educationTax + specialTax;
+    
+    return {
+        acquisitionTax: Math.round(acquisitionTax / 10000), // 만원 단위
+        educationTax: Math.round(educationTax / 10000),
+        specialTax: Math.round(specialTax / 10000),
+        totalTax: Math.round(totalTax / 10000),
+        taxRate: taxRate * 100 // 퍼센트로 표시
+    };
 }
 
 // 부채 리스트 관리

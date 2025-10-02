@@ -893,11 +893,34 @@ function recommendApartment() {
     
     const availableMonthlyPayment = Math.max(0, maxMonthlyPayment - totalExistingMonthlyPayment);
     
-    // 대출 가능 금액 계산
-    const maxLoanAmount = calculateMaxLoanForApt(availableMonthlyPayment, interestRate, loanTerm);
+    // DSR 기준 최대 대출 가능 금액
+    const maxLoanByDSR = calculateMaxLoanForApt(availableMonthlyPayment, interestRate, loanTerm);
     
-    // 구매 가능 아파트 금액
-    const maxApartmentPrice = availableCash + maxLoanAmount;
+    // LTV 기준 계산 (주택 가격 기준)
+    // 서울 투기과열지구: 40%, 비규제지역: 70%
+    const ltvRatio = 0.6; // 평균 60% 적용
+    
+    // LTV를 고려한 최대 주택 가격
+    // 주택가격 = 가용현금 / (1 - LTV비율)
+    const maxPriceByLTV = Math.floor(availableCash / (1 - ltvRatio));
+    const maxLoanByLTV = Math.floor(maxPriceByLTV * ltvRatio);
+    
+    // DSR과 LTV 중 더 작은 대출금액 적용
+    const maxLoanAmount = Math.min(maxLoanByDSR, maxLoanByLTV);
+    
+    // 최종 구매 가능 아파트 금액
+    let maxApartmentPrice;
+    let limitingFactor;
+    
+    if (maxLoanByDSR < maxLoanByLTV) {
+        // DSR이 제약사항인 경우
+        maxApartmentPrice = availableCash + maxLoanByDSR;
+        limitingFactor = 'DSR';
+    } else {
+        // LTV가 제약사항인 경우
+        maxApartmentPrice = maxPriceByLTV;
+        limitingFactor = 'LTV';
+    }
     
     // 추천 아파트 필터링
     const affordableApts = apartmentDatabase.filter(apt => apt.price <= maxApartmentPrice * 1.1); // 10% 여유
@@ -912,7 +935,12 @@ function recommendApartment() {
         maxApartmentPrice,
         monthlyPayment: availableMonthlyPayment,
         salary,
-        totalExistingPayment: totalExistingMonthlyPayment
+        totalExistingPayment: totalExistingMonthlyPayment,
+        maxLoanByDSR,
+        maxLoanByLTV,
+        maxPriceByLTV,
+        ltvRatio,
+        limitingFactor
     });
 }
 
@@ -941,37 +969,63 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
     
     aptList.innerHTML += `
         <div class="loan-summary budget-summary">
-            <h3>💰 구매 가능 정보</h3>
+            <h3>💰 매수 가능 금액 분석</h3>
             <div class="budget-details">
                 <div class="budget-row">
-                    <span>가용 현금:</span>
+                    <span>보유 현금:</span>
                     <span>${loanInfo.availableCash.toLocaleString()}만원</span>
                 </div>
-                <div class="budget-row">
-                    <span>월 소득:</span>
-                    <span>${Math.round(monthlyIncome).toLocaleString()}만원</span>
+                
+                <div style="margin: 15px 0; padding: 15px 0; border-top: 1px solid #ddd; border-bottom: 1px solid #ddd;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">📊 DSR 기준 (소득 대비)</div>
+                    <div class="budget-row">
+                        <span>월 소득:</span>
+                        <span>${Math.round(monthlyIncome).toLocaleString()}만원</span>
+                    </div>
+                    <div class="budget-row">
+                        <span>DSR 한도 (40%):</span>
+                        <span>${Math.round(monthlyIncome * 0.4).toLocaleString()}만원</span>
+                    </div>
+                    ${existingDebtPayment > 0 ? `
+                    <div class="budget-row" style="color: #e74c3c;">
+                        <span>기존 부채 상환:</span>
+                        <span>-${existingDebtPayment.toLocaleString()}만원</span>
+                    </div>
+                    ` : ''}
+                    <div class="budget-row">
+                        <span>신규 대출 가능 상환액:</span>
+                        <span>${Math.round(loanInfo.monthlyPayment).toLocaleString()}만원</span>
+                    </div>
+                    <div class="budget-row" style="background-color: #e8f5e9; padding: 5px; border-radius: 4px;">
+                        <span>DSR 기준 최대 대출:</span>
+                        <span style="font-weight: 600;">${loanInfo.maxLoanByDSR.toLocaleString()}만원</span>
+                    </div>
                 </div>
-                <div class="budget-row">
-                    <span>DSR 한도 (40%):</span>
-                    <span>${Math.round(monthlyIncome * 0.4).toLocaleString()}만원</span>
+                
+                <div style="margin: 15px 0; padding: 15px 0; border-bottom: 1px solid #ddd;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">🏦 LTV 기준 (주택가격 대비)</div>
+                    <div class="budget-row">
+                        <span>LTV 한도:</span>
+                        <span>${Math.round(loanInfo.ltvRatio * 100)}%</span>
+                    </div>
+                    <div class="budget-row">
+                        <span>LTV 기준 최대 주택가격:</span>
+                        <span>${loanInfo.maxPriceByLTV.toLocaleString()}만원</span>
+                    </div>
+                    <div class="budget-row" style="background-color: #e8f5e9; padding: 5px; border-radius: 4px;">
+                        <span>LTV 기준 최대 대출:</span>
+                        <span style="font-weight: 600;">${loanInfo.maxLoanByLTV.toLocaleString()}만원</span>
+                    </div>
                 </div>
-                ${existingDebtPayment > 0 ? `
-                <div class="budget-row" style="color: #e74c3c;">
-                    <span>기존 부채 상환액:</span>
-                    <span>-${existingDebtPayment.toLocaleString()}만원</span>
-                </div>
-                ` : ''}
-                <div class="budget-row">
-                    <span>신규 대출 가능 상환액:</span>
-                    <span>${Math.round(loanInfo.monthlyPayment).toLocaleString()}만원</span>
-                </div>
-                <div class="budget-row">
-                    <span>최대 대출 가능액:</span>
-                    <span>${loanInfo.maxLoanAmount.toLocaleString()}만원</span>
-                </div>
-                <div class="budget-row available">
-                    <span>총 구매 가능 금액:</span>
+                
+                <div class="budget-row available" style="font-size: 1.1em;">
+                    <span>최종 구매 가능 금액:</span>
                     <span>${loanInfo.maxApartmentPrice.toLocaleString()}만원</span>
+                </div>
+                <div style="text-align: center; color: #666; font-size: 0.9em; margin-top: 10px;">
+                    ${loanInfo.limitingFactor === 'DSR' 
+                        ? '⚠️ 소득 대비 상환능력(DSR)이 제한요인입니다' 
+                        : '⚠️ 주택가격 대비 대출비율(LTV)이 제한요인입니다'}
                 </div>
             </div>
         </div>

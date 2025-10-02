@@ -901,15 +901,24 @@ function recommendApartment() {
     const ltvRatio = 0.6; // 평균 60% 적용
     const ltvMaxLoan = 60000; // LTV 최대 한도 6억(만원)
     
-    // LTV를 고려한 최대 주택 가격
-    // 주택가격 = 가용현금 / (1 - LTV비율)
-    const maxPriceByLTV = Math.floor(availableCash / (1 - ltvRatio));
-    let maxLoanByLTV = Math.floor(maxPriceByLTV * ltvRatio);
+    // LTV를 고려한 최대 주택 가격 계산
+    let maxPriceByLTV;
+    let maxLoanByLTV;
+    let isLTVCapped = false;
     
-    // LTV 6억 한도 적용
-    const isLTVCapped = maxLoanByLTV > ltvMaxLoan;
-    if (isLTVCapped) {
+    // DSR로 계산한 대출 가능액이 LTV 한도(6억)보다 큰 경우
+    if (maxLoanByDSR > ltvMaxLoan) {
+        // LTV 한도 6억을 최대한 활용
+        isLTVCapped = true;
         maxLoanByLTV = ltvMaxLoan;
+        // 6억 대출받을 때 필요한 최소 주택가격 계산
+        const minHousePriceForMaxLTV = Math.ceil(ltvMaxLoan / ltvRatio);
+        // 가용현금 + 6억으로 살 수 있는 최대 주택가격
+        maxPriceByLTV = availableCash + ltvMaxLoan;
+    } else {
+        // DSR 대출 가능액이 LTV 한도보다 작은 경우 기존 로직 적용
+        maxPriceByLTV = Math.floor(availableCash / (1 - ltvRatio));
+        maxLoanByLTV = Math.floor(maxPriceByLTV * ltvRatio);
     }
     
     // DSR과 LTV 중 더 작은 대출금액 적용

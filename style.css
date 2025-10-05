@@ -1392,3 +1392,46 @@ button:active:not(:disabled) {
     border-color: #95a5a6;
 }
 
+/* 지역 선택 스타일 */
+.region-select-wrapper {
+    margin-bottom: 20px;
+}
+
+.region-select {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 1.1em;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.3s;
+}
+
+.region-select:focus {
+    outline: none;
+    border-color: #3498db;
+}
+.region-select optgroup {
+    font-weight: bold;
+    color: #2c3e50;
+    padding: 8px 0;
+}
+.region-select option {
+    padding: 8px 12px;
+    font-weight: normal;
+}
+
+.region-info {
+    background-color: #e8f4f8;
+    padding: 12px 15px;
+    border-radius: 5px;
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.region-info p {
+    margin: 0;
+    color: #2c3e50;
+}
+

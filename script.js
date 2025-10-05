@@ -896,9 +896,14 @@ function recommendApartment() {
     // DSR 기준 최대 대출 가능 금액
     const maxLoanByDSR = calculateMaxLoanForApt(availableMonthlyPayment, interestRate, loanTerm);
     
-    // LTV 기준 계산 (주택 가격 기준)
-    // 서울 투기과열지구: 40%, 비규제지역: 70%
-    const ltvRatio = 0.6; // 평균 60% 적용
+    // 선택된 지역 정보 가져오기
+    const selectedRegion = document.getElementById('preferred-region').value;
+    
+    // LTV 기준 계산 (지역에 따라 다름)
+    let ltvRatio = 0.7; // 기본값: 비규제지역 70%
+    if (selectedRegion && regionMapping[selectedRegion]) {
+        ltvRatio = regionMapping[selectedRegion].ltv / 100;
+    }
     const ltvMaxLoan = 60000; // LTV 최대 한도 6억(만원)
     
     // LTV를 고려한 최대 주택 가격 계산
@@ -986,7 +991,9 @@ function recommendApartment() {
         limitingFactor,
         isLTVCapped,
         ltvMaxLoan,
-        acquisitionTaxInfo: finalTaxInfo
+        acquisitionTaxInfo: finalTaxInfo,
+        selectedRegion: selectedRegion,
+        regionInfo: selectedRegion && regionMapping[selectedRegion] ? regionMapping[selectedRegion] : null
     });
 }
 
@@ -1013,7 +1020,41 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
     const monthlyIncome = loanInfo.salary / 12;
     const existingDebtPayment = Math.round(loanInfo.totalExistingPayment);
     
+    // 지역 유형 정보
+    let areaTypeDisplay = '지역 미선택';
+    let regionName = '지역을 선택해주세요';
+    if (loanInfo.regionInfo) {
+        areaTypeDisplay = loanInfo.regionInfo.type;
+        regionName = loanInfo.regionInfo.name;
+    }
+    const ltvPercentage = Math.round(loanInfo.ltvRatio * 100);
+
     aptList.innerHTML += `
+        <div class="area-type-info" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 15px 0; font-size: 1.2em; display: flex; align-items: center; gap: 10px;">
+                🏘️ 선택한 지역 정보
+            </h3>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">선택 지역</div>
+                    <div style="font-size: 1.1em; font-weight: 600;">${regionName}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">지역 구분</div>
+                    <div style="font-size: 1.1em; font-weight: 600;">${areaTypeDisplay}</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px;">
+                    <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">적용 LTV 비율</div>
+                    <div style="font-size: 1.1em; font-weight: 600;">${ltvPercentage}%</div>
+                </div>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 15px; border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9em; opacity: 0.9; margin-bottom: 5px;">최대 대출 한도</div>
+                <div style="font-size: 1.3em; font-weight: 700; color: #ffd700;">6억원 (60,000만원)</div>
+                <div style="font-size: 0.8em; opacity: 0.8; margin-top: 5px;">정부 정책에 의한 절대 한도</div>
+            </div>
+        </div>
+
         <div class="loan-summary budget-summary">
             <h3>💰 매수 가능 금액 분석</h3>
             <div class="budget-details">
@@ -1049,17 +1090,15 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                 </div>
                 
                 <div style="margin: 15px 0; padding: 15px 0; border-bottom: 1px solid #ddd;">
-                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">🏦 LTV 기준 (주택가격 대비)</div>
-                    <div class="budget-row">
-                        <span>LTV 한도:</span>
-                        <span>${Math.round(loanInfo.ltvRatio * 100)}%</span>
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 10px;">🏦 LTV 기준 (주택가격 대비) - ${areaTypeDisplay}</div>
+                    <div class="budget-row" style="background-color: #e3f2fd; padding: 8px; border-radius: 4px; font-weight: 600;">
+                        <span>${areaTypeDisplay} LTV 한도:</span>
+                        <span style="color: #1976d2;">${Math.round(loanInfo.ltvRatio * 100)}%</span>
                     </div>
-                    ${loanInfo.isLTVCapped ? `
-                    <div class="budget-row" style="color: #e67700;">
-                        <span>정책 최대 한도:</span>
-                        <span>${loanInfo.ltvMaxLoan.toLocaleString()}만원 (6억)</span>
+                    <div class="budget-row" style="background-color: #fff3e0; padding: 8px; border-radius: 4px; border-left: 4px solid #ff9800;">
+                        <span>🚨 정책 최대 한도:</span>
+                        <span style="font-weight: 700; color: #e65100;">${loanInfo.ltvMaxLoan.toLocaleString()}만원 (6억원)</span>
                     </div>
-                    ` : ''}
                     <div class="budget-row">
                         <span>LTV 기준 최대 주택가격:</span>
                         <span>${loanInfo.maxPriceByLTV.toLocaleString()}만원</span>
@@ -1115,8 +1154,8 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
                     ${loanInfo.limitingFactor === 'DSR' 
                         ? '⚠️ 소득 대비 상환능력(DSR)이 제한요인입니다' 
                         : loanInfo.limitingFactor === 'LTV_CAPPED'
-                        ? '⚠️ LTV 정책 한도(6억원)가 제한요인입니다'
-                        : '⚠️ 주택가격 대비 대출비율(LTV)이 제한요인입니다'}
+                        ? `⚠️ LTV 정책 한도(6억원)가 제한요인입니다 [${areaTypeDisplay}]`
+                        : `⚠️ ${areaTypeDisplay} LTV ${ltvPercentage}% 비율이 제한요인입니다`}
                 </div>
                 ${loanInfo.limitingFactor === 'LTV_CAPPED' && loanInfo.maxLoanByDSR > loanInfo.ltvMaxLoan ? `
                 <div style="background-color: #fff4e5; padding: 15px; border-radius: 8px; margin-top: 15px;">
@@ -1189,6 +1228,12 @@ function createApartmentItem(apt, loanInfo) {
                     </div>
                     <div class="loan-info">
                         <h4>💳 구매 시 예상 비용</h4>
+                        <div style="background-color: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #007bff;">
+                            <div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">적용 대출 조건</div>
+                            <div style="font-weight: 600; color: #007bff;">
+                                ${loanInfo.regionInfo ? loanInfo.regionInfo.type : '지역 미선택'} LTV ${Math.round(loanInfo.ltvRatio * 100)}% | 최대 6억원 한도
+                            </div>
+                        </div>
                         <p>주택 가격: ${apt.price.toLocaleString()}만원</p>
                         <p>취득세 (${taxInfo.taxRate}%): ${taxInfo.totalTax.toLocaleString()}만원</p>
                         <p style="font-weight: 600; color: #e74c3c;">총 필요 자금: ${totalNeeded.toLocaleString()}만원</p>
@@ -1330,9 +1375,80 @@ function updateDebtItem(debtId, field, value) {
     }
 }
 
+// 지역 정보 매핑
+const regionMapping = {
+    // 서울 비규제지역
+    'seoul-jung': { name: '서울 중구', type: '비규제지역', ltv: 70 },
+    'seoul-jongno': { name: '서울 종로구', type: '비규제지역', ltv: 70 },
+    'seoul-seodaemun': { name: '서울 서대문구', type: '비규제지역', ltv: 70 },
+    'seoul-mapo': { name: '서울 마포구', type: '비규제지역', ltv: 70 },
+    'seoul-geumcheon': { name: '서울 금천구', type: '비규제지역', ltv: 70 },
+    'seoul-guro': { name: '서울 구로구', type: '비규제지역', ltv: 70 },
+    'seoul-yeongdeungpo': { name: '서울 영등포구', type: '비규제지역', ltv: 70 },
+    'seoul-dongjak': { name: '서울 동작구', type: '비규제지역', ltv: 70 },
+    'seoul-gwanak': { name: '서울 관악구', type: '비규제지역', ltv: 70 },
+    'seoul-eunpyeong': { name: '서울 은평구', type: '비규제지역', ltv: 70 },
+    'seoul-seongbuk': { name: '서울 성북구', type: '비규제지역', ltv: 70 },
+    'seoul-dobong': { name: '서울 도봉구', type: '비규제지역', ltv: 70 },
+    'seoul-nowon': { name: '서울 노원구', type: '비규제지역', ltv: 70 },
+    'seoul-dongdaemun': { name: '서울 동대문구', type: '비규제지역', ltv: 70 },
+    'seoul-jungnang': { name: '서울 중랑구', type: '비규제지역', ltv: 70 },
+    'seoul-seongdong': { name: '서울 성동구', type: '비규제지역', ltv: 70 },
+    'seoul-gwangjin': { name: '서울 광진구', type: '비규제지역', ltv: 70 },
+    
+    // 서울 규제지역
+    'seoul-gangnam': { name: '서울 강남구', type: '규제지역', ltv: 40 },
+    'seoul-seocho': { name: '서울 서초구', type: '규제지역', ltv: 40 },
+    'seoul-songpa': { name: '서울 송파구', type: '규제지역', ltv: 40 },
+    'seoul-yongsan': { name: '서울 용산구', type: '규제지역', ltv: 40 },
+    
+    // 경기도 (비규제지역)
+    'gyeonggi-seongnam': { name: '경기 성남시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-suwon': { name: '경기 수원시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-goyang': { name: '경기 고양시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-yongin': { name: '경기 용인시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-bucheon': { name: '경기 부천시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-ansan': { name: '경기 안산시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-anyang': { name: '경기 안양시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-namyangju': { name: '경기 남양주시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-hwaseong': { name: '경기 화성시', type: '비규제지역', ltv: 70 },
+    'gyeonggi-pyeongtaek': { name: '경기 평택시', type: '비규제지역', ltv: 70 },
+    
+    // 인천 (비규제지역)
+    'incheon-yeonsu': { name: '인천 연수구', type: '비규제지역', ltv: 70 },
+    'incheon-namdong': { name: '인천 남동구', type: '비규제지역', ltv: 70 },
+    'incheon-bupyeong': { name: '인천 부평구', type: '비규제지역', ltv: 70 },
+    'incheon-seo': { name: '인천 서구', type: '비규제지역', ltv: 70 },
+    'incheon-jung': { name: '인천 중구', type: '비규제지역', ltv: 70 }
+};
+
+// 지역 정보 업데이트
+function updateRegionInfo() {
+    const selectedRegion = document.getElementById('preferred-region').value;
+    const regionInfo = document.getElementById('region-info');
+    
+    if (!selectedRegion || !regionMapping[selectedRegion]) {
+        regionInfo.innerHTML = '<p>지역을 선택해주세요.</p>';
+        return;
+    }
+    
+    const region = regionMapping[selectedRegion];
+    const maxLoanAmount = '6억원';
+    
+    regionInfo.innerHTML = `
+        <p>💡 <strong>${region.name}</strong>: ${region.type}, LTV ${region.ltv}% (최대 ${maxLoanAmount})</p>
+    `;
+}
+
 // 전역 함수 추가
 window.selectPurchaseType = selectPurchaseType;
 window.recommendApartment = recommendApartment;
 window.addDebtItem = addDebtItem;
 window.removeDebtItem = removeDebtItem;
 window.updateDebtItem = updateDebtItem;
+window.updateRegionInfo = updateRegionInfo;
+
+// Initialize region info on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateRegionInfo();
+});

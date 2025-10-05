@@ -1178,73 +1178,11 @@ function displayApartmentResults(recommendedApts, affordableApts, loanInfo) {
         </div>
     `;
     
-    if (recommendedApts.length > 0) {
-        aptList.innerHTML += '<h3 style="margin: 25px 0 15px; color: #27ae60;">💚 추천 아파트</h3>';
-        recommendedApts.forEach(apt => {
-            aptList.innerHTML += createApartmentItem(apt, loanInfo);
-        });
-    }
-    
-    if (affordableApts.length > 0 && affordableApts.length > recommendedApts.length) {
-        aptList.innerHTML += '<h3 style="margin: 25px 0 15px; color: #f39c12;">💛 대안 아파트</h3>';
-        affordableApts.filter(apt => !recommendedApts.includes(apt)).forEach(apt => {
-            aptList.innerHTML += createApartmentItem(apt, loanInfo);
-        });
-    }
-    
-    if (recommendedApts.length === 0 && affordableApts.length === 0) {
-        aptList.innerHTML += '<p>현재 조건에 맞는 아파트를 찾지 못했습니다.</p>';
-    }
     
     // 스크롤
     aptResult.scrollIntoView({ behavior: 'smooth' });
 }
 
-// 아파트 아이템 생성
-function createApartmentItem(apt, loanInfo) {
-    const taxInfo = calculateAcquisitionTax(apt.price);
-    const totalNeeded = apt.price + taxInfo.totalTax;
-    const downPayment = Math.min(loanInfo.availableCash - taxInfo.totalTax, apt.price);
-    const loanAmount = Math.max(0, apt.price - downPayment);
-    const monthlyPayment = calculateMonthlyPaymentForApt(loanAmount, 0.045, 30);
-    
-    return `
-        <div class="apt-item">
-            <div class="apt-content-wrapper">
-                <div class="apt-image">
-                    <img src="${apt.image}" alt="${apt.name}" loading="lazy">
-                </div>
-                <div class="apt-info">
-                    <div class="apt-name">${apt.name}</div>
-                    <div class="apt-location">📍 ${apt.location}</div>
-                    <div class="apt-price">
-                        ${apt.price.toLocaleString()}만원
-                        <span style="font-size: 0.85em; color: #666;">
-                            (+ 취득세 ${taxInfo.totalTax.toLocaleString()}만원)
-                        </span>
-                    </div>
-                    <div class="apt-details">
-                        면적: ${apt.size} | ${apt.year}년 준공 | ${apt.floors}층
-                    </div>
-                    <div class="loan-info">
-                        <h4>💳 구매 시 예상 비용</h4>
-                        <div style="background-color: #f8f9fa; padding: 10px; border-radius: 6px; margin-bottom: 10px; border-left: 4px solid #007bff;">
-                            <div style="font-size: 0.9em; color: #666; margin-bottom: 4px;">적용 대출 조건</div>
-                            <div style="font-weight: 600; color: #007bff;">
-                                ${loanInfo.regionInfo ? loanInfo.regionInfo.type : '지역 미선택'} LTV ${Math.round(loanInfo.ltvRatio * 100)}% | 최대 6억원 한도
-                            </div>
-                        </div>
-                        <p>주택 가격: ${apt.price.toLocaleString()}만원</p>
-                        <p>취득세 (${taxInfo.taxRate}%): ${taxInfo.totalTax.toLocaleString()}만원</p>
-                        <p style="font-weight: 600; color: #e74c3c;">총 필요 자금: ${totalNeeded.toLocaleString()}만원</p>
-                        <p style="margin-top: 8px;">대출 필요액: ${loanAmount.toLocaleString()}만원</p>
-                        <p>월 상환액: ${Math.round(monthlyPayment).toLocaleString()}만원</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
 
 // 월 상환액 계산
 function calculateMonthlyPaymentForApt(principal, annualRate, years) {

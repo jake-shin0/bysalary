@@ -1,0 +1,19 @@
+{
+  "name": "bysalary-api-proxy",
+  "version": "1.0.0",
+  "description": "국토교통부 실거래가 API 프록시 서버",
+  "main": "api-proxy.js",
+  "scripts": {
+    "start": "node api-proxy.js",
+    "dev": "nodemon api-proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.2",
+    "cors": "^2.8.5",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

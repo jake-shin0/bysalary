@@ -822,6 +822,7 @@ document.addEventListener('click', function(event) {
 });
 
 // 아파트 추천 기능
+// 임시 아파트 데이터베이스 (실거래가 API 연동 전까지 사용)
 const apartmentDatabase = [
     // 서울 강남권
     { name: "래미안 강남", location: "서울시 강남구 도곡동", price: 250000, size: "34평", year: 2018, floors: 35, image: "https://via.placeholder.com/400x300/cccccc/666666?text=래미안+강남" },
@@ -847,6 +848,48 @@ const apartmentDatabase = [
     { name: "김포 한강신도시", location: "경기도 김포시", price: 35000, size: "19평", year: 2012, floors: 20, image: "https://via.placeholder.com/400x300/cccccc/666666?text=김포+한강신도시" }
 ];
 
+// 실거래가 API를 통해 실제 데이터 가져오기
+async function fetchRealApartmentData(region, maxPrice) {
+    try {
+        // 현재 날짜 기준으로 최근 3개월 데이터 조회
+        const now = new Date();
+        const yearMonth = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0');
+        
+        // Vercel Serverless Function을 통해 실거래가 데이터 조회
+        const response = await fetch(`/api/apartment-prices?region=${region}&yearMonth=${yearMonth}`);
+        
+        if (!response.ok) {
+            throw new Error('API 호출 실패');
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+            // 가격 범위에 맞는 아파트만 필터링
+            return data.data
+                .filter(apt => apt.price <= maxPrice * 1.2 && apt.cancelYn !== 'O') // 취소되지 않은 거래만
+                .map(apt => ({
+                    name: apt.dong ? `${apt.name} ${apt.dong}` : apt.name,
+                    location: apt.location,
+                    price: apt.price,
+                    size: Math.round(apt.size * 0.3025) + "평", // ㎡를 평으로 변환
+                    year: apt.buildYear,
+                    floors: apt.floor,
+                    image: "https://via.placeholder.com/400x300/cccccc/666666?text=" + encodeURIComponent(apt.name),
+                    isRealData: true, // 실제 데이터 표시
+                    dealDate: `${apt.year}.${apt.month}.${apt.day}`, // 거래일자
+                    dealType: apt.dealType // 거래유형
+                }))
+                .sort((a, b) => b.price - a.price); // 가격 내림차순 정렬
+        }
+    } catch (error) {
+        console.error('실거래가 API 호출 실패:', error);
+    }
+    
+    // API 호출 실패시 기존 데이터베이스 반환
+    return apartmentDatabase;
+}
+
 // 매매/갭투자 선택
 function selectPurchaseType(type) {
     const purchaseForm = document.getElementById('purchase-form');
@@ -867,7 +910,7 @@ function selectPurchaseType(type) {
 }
 
 // 아파트 추천 기능
-function recommendApartment() {
+async function recommendApartment() {
     const availableCash = parseInt(document.getElementById('available-cash').value) || 0;
     const salary = parseInt(document.getElementById('apt-salary').value) || 0;
     
@@ -875,6 +918,12 @@ function recommendApartment() {
         alert('가용 현금과 연봉을 입력해주세요.');
         return;
     }
+    
+    // 로딩 표시
+    const aptResult = document.getElementById('apt-result');
+    const aptList = document.getElementById('aptList');
+    aptResult.classList.remove('hidden');
+    aptList.innerHTML = '<div class="loading-message" style="text-align: center; padding: 40px;"><div class="spinner"></div><p>실거래가 데이터를 조회중입니다...</p></div>';
     
     // 대출 가능 금액 계산 (DSR 40% 기준)
     const monthlyIncome = salary / 12;
@@ -969,9 +1018,21 @@ function recommendApartment() {
         }
     }
     
+    // 선택된 지역의 실거래가 데이터 가져오기
+    const selectedRegion = document.getElementById('preferred-region').value;
+    let apartmentData = apartmentDatabase; // 기본값
+    
+    if (selectedRegion && regionMapping[selectedRegion]) {
+        // 실거래가 API 호출
+        const realData = await fetchRealApartmentData(selectedRegion, maxApartmentPrice);
+        if (realData && realData.length > 0) {
+            apartmentData = realData;
+        }
+    }
+    
     // 추천 아파트 필터링
-    const affordableApts = apartmentDatabase.filter(apt => apt.price <= maxApartmentPrice * 1.1); // 10% 여유
-    const recommendedApts = apartmentDatabase.filter(apt => 
+    const affordableApts = apartmentData.filter(apt => apt.price <= maxApartmentPrice * 1.1); // 10% 여유
+    const recommendedApts = apartmentData.filter(apt => 
         apt.price <= maxApartmentPrice && apt.price >= maxApartmentPrice * 0.7
     );
     

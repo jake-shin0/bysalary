@@ -1620,3 +1620,55 @@ button:active:not(:disabled) {
     font-weight: normal;
     margin-left: 5px;
 }
+
+/* 상승/하락 분리 테이블 */
+.ranking-tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.ranking-table {
+    background: #fafafa;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.ranking-table-header {
+    padding: 12px 15px;
+    font-weight: 600;
+    font-size: 0.95em;
+}
+
+.ranking-table-header.up {
+    background: linear-gradient(135deg, #ffe5e5 0%, #fff 100%);
+    color: #c0392b;
+    border-bottom: 2px solid #e74c3c;
+}
+
+.ranking-table-header.down {
+    background: linear-gradient(135deg, #e5f0ff 0%, #fff 100%);
+    color: #2471a3;
+    border-bottom: 2px solid #3498db;
+}
+
+.ranking-empty-small {
+    padding: 20px;
+    text-align: center;
+    color: #95a5a6;
+    font-size: 0.9em;
+}
+
+.ranking-period {
+    padding: 10px 15px;
+    color: #7f8c8d;
+    font-size: 0.85em;
+    border-bottom: 1px solid #ecf0f1;
+    margin-bottom: 10px;
+}
+
+@media (max-width: 600px) {
+    .ranking-tables {
+        grid-template-columns: 1fr;
+    }
+}

@@ -1635,35 +1635,62 @@ function displayVolatilityRanking(rankings, months) {
         return `${price.toLocaleString()}만원`;
     };
 
-    let html = rankings.map((apt, index) => {
-        const isUp = apt.changePercent > 0;
-        const arrow = isUp ? '↑' : '↓';
-        const changeClass = isUp ? 'up' : 'down';
-        const rankClass = index < 3 ? 'top3' : '';
+    // 상승/하락 분리
+    const risingApts = rankings.filter(apt => apt.changePercent > 0)
+        .sort((a, b) => b.changePercent - a.changePercent)
+        .slice(0, 5);
+    const fallingApts = rankings.filter(apt => apt.changePercent < 0)
+        .sort((a, b) => a.changePercent - b.changePercent)
+        .slice(0, 5);
 
-        return `
-            <div class="ranking-item">
-                <div class="ranking-rank ${rankClass}">${index + 1}</div>
-                <div class="ranking-info">
-                    <div class="ranking-name">${apt.name} <span class="ranking-size">${apt.size || ''}</span></div>
-                    <div class="ranking-detail">${apt.location || ''} · 거래 ${apt.txCount}건</div>
-                </div>
-                <div class="ranking-change ${changeClass}">
-                    <div class="ranking-percent">
-                        <span class="ranking-arrow">${arrow}</span>${Math.abs(apt.changePercent).toFixed(1)}%
+    const renderTable = (apts, isRising) => {
+        if (apts.length === 0) {
+            return '<div class="ranking-empty-small">데이터 없음</div>';
+        }
+        return apts.map((apt, index) => {
+            const arrow = isRising ? '↑' : '↓';
+            const changeClass = isRising ? 'up' : 'down';
+            const rankClass = index < 3 ? 'top3' : '';
+
+            return `
+                <div class="ranking-item">
+                    <div class="ranking-rank ${rankClass}">${index + 1}</div>
+                    <div class="ranking-info">
+                        <div class="ranking-name">${apt.name} <span class="ranking-size">${apt.size || ''}</span></div>
+                        <div class="ranking-detail">${apt.location || ''} · 거래 ${apt.txCount}건</div>
                     </div>
-                    <div class="ranking-price-info">${formatPrice(apt.twoAgoAvg)} → ${formatPrice(apt.currentAvg)}</div>
+                    <div class="ranking-change ${changeClass}">
+                        <div class="ranking-percent">
+                            <span class="ranking-arrow">${arrow}</span>${Math.abs(apt.changePercent).toFixed(1)}%
+                        </div>
+                        <div class="ranking-price-info">${formatPrice(apt.twoAgoAvg)} → ${formatPrice(apt.currentAvg)}</div>
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
+    };
 
-    // 기간 표시 추가
-    const periodInfo = `<div class="ranking-period" style="padding: 10px 15px; color: #7f8c8d; font-size: 0.85em; border-bottom: 1px solid #ecf0f1;">
+    // 기간 표시
+    const periodInfo = `<div class="ranking-period">
         기간: ${months[2].slice(0,4)}.${months[2].slice(4)} ~ ${months[0].slice(0,4)}.${months[0].slice(4)}
     </div>`;
 
-    rankingList.innerHTML = periodInfo + html;
+    // 두 개의 테이블로 구성
+    const html = `
+        ${periodInfo}
+        <div class="ranking-tables">
+            <div class="ranking-table rising">
+                <div class="ranking-table-header up">📈 상승 TOP 5</div>
+                ${renderTable(risingApts, true)}
+            </div>
+            <div class="ranking-table falling">
+                <div class="ranking-table-header down">📉 하락 TOP 5</div>
+                ${renderTable(fallingApts, false)}
+            </div>
+        </div>
+    `;
+
+    rankingList.innerHTML = html;
 }
 
 // 전역 함수 추가

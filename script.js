@@ -1373,62 +1373,130 @@ function updateDebtItem(debtId, field, value) {
     }
 }
 
-// 지역 정보 매핑
-const regionMapping = {
-    // 서울 비규제지역
-    'seoul-jung': { name: '서울 중구', type: '비규제지역', ltv: 70 },
-    'seoul-jongno': { name: '서울 종로구', type: '비규제지역', ltv: 70 },
-    'seoul-seodaemun': { name: '서울 서대문구', type: '비규제지역', ltv: 70 },
-    'seoul-mapo': { name: '서울 마포구', type: '비규제지역', ltv: 70 },
-    'seoul-geumcheon': { name: '서울 금천구', type: '비규제지역', ltv: 70 },
-    'seoul-guro': { name: '서울 구로구', type: '비규제지역', ltv: 70 },
-    'seoul-yeongdeungpo': { name: '서울 영등포구', type: '비규제지역', ltv: 70 },
-    'seoul-dongjak': { name: '서울 동작구', type: '비규제지역', ltv: 70 },
-    'seoul-gwanak': { name: '서울 관악구', type: '비규제지역', ltv: 70 },
-    'seoul-eunpyeong': { name: '서울 은평구', type: '비규제지역', ltv: 70 },
-    'seoul-seongbuk': { name: '서울 성북구', type: '비규제지역', ltv: 70 },
-    'seoul-dobong': { name: '서울 도봉구', type: '비규제지역', ltv: 70 },
-    'seoul-nowon': { name: '서울 노원구', type: '비규제지역', ltv: 70 },
-    'seoul-dongdaemun': { name: '서울 동대문구', type: '비규제지역', ltv: 70 },
-    'seoul-jungnang': { name: '서울 중랑구', type: '비규제지역', ltv: 70 },
-    'seoul-seongdong': { name: '서울 성동구', type: '비규제지역', ltv: 70 },
-    'seoul-gwangjin': { name: '서울 광진구', type: '비규제지역', ltv: 70 },
-    
-    // 서울 규제지역
-    'seoul-gangnam': { name: '서울 강남구', type: '규제지역', ltv: 40 },
-    'seoul-seocho': { name: '서울 서초구', type: '규제지역', ltv: 40 },
-    'seoul-songpa': { name: '서울 송파구', type: '규제지역', ltv: 40 },
-    'seoul-yongsan': { name: '서울 용산구', type: '규제지역', ltv: 40 },
-    
-    // 경기도 (비규제지역)
-    'gyeonggi-seongnam': { name: '경기 성남시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-suwon': { name: '경기 수원시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-goyang': { name: '경기 고양시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-yongin': { name: '경기 용인시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-bucheon': { name: '경기 부천시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-ansan': { name: '경기 안산시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-anyang': { name: '경기 안양시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-namyangju': { name: '경기 남양주시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-hwaseong': { name: '경기 화성시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-pyeongtaek': { name: '경기 평택시', type: '비규제지역', ltv: 70 }
+// 시/도 구조 (계층형)
+const cityStructure = {
+    'seoul': {
+        name: '서울시',
+        districts: [
+            { code: 'gangnam', name: '강남구', type: '규제지역', ltv: 40 },
+            { code: 'gangdong', name: '강동구', type: '비규제지역', ltv: 70 },
+            { code: 'gangbuk', name: '강북구', type: '비규제지역', ltv: 70 },
+            { code: 'gangseo', name: '강서구', type: '비규제지역', ltv: 70 },
+            { code: 'gwanak', name: '관악구', type: '비규제지역', ltv: 70 },
+            { code: 'gwangjin', name: '광진구', type: '비규제지역', ltv: 70 },
+            { code: 'guro', name: '구로구', type: '비규제지역', ltv: 70 },
+            { code: 'geumcheon', name: '금천구', type: '비규제지역', ltv: 70 },
+            { code: 'nowon', name: '노원구', type: '비규제지역', ltv: 70 },
+            { code: 'dobong', name: '도봉구', type: '비규제지역', ltv: 70 },
+            { code: 'dongdaemun', name: '동대문구', type: '비규제지역', ltv: 70 },
+            { code: 'dongjak', name: '동작구', type: '비규제지역', ltv: 70 },
+            { code: 'mapo', name: '마포구', type: '비규제지역', ltv: 70 },
+            { code: 'seodaemun', name: '서대문구', type: '비규제지역', ltv: 70 },
+            { code: 'seocho', name: '서초구', type: '규제지역', ltv: 40 },
+            { code: 'seongdong', name: '성동구', type: '비규제지역', ltv: 70 },
+            { code: 'seongbuk', name: '성북구', type: '비규제지역', ltv: 70 },
+            { code: 'songpa', name: '송파구', type: '규제지역', ltv: 40 },
+            { code: 'yangcheon', name: '양천구', type: '비규제지역', ltv: 70 },
+            { code: 'yeongdeungpo', name: '영등포구', type: '비규제지역', ltv: 70 },
+            { code: 'yongsan', name: '용산구', type: '규제지역', ltv: 40 },
+            { code: 'eunpyeong', name: '은평구', type: '비규제지역', ltv: 70 },
+            { code: 'jongno', name: '종로구', type: '비규제지역', ltv: 70 },
+            { code: 'jung', name: '중구', type: '비규제지역', ltv: 70 },
+            { code: 'jungnang', name: '중랑구', type: '비규제지역', ltv: 70 }
+        ]
+    },
+    'gyeonggi': {
+        name: '경기도',
+        districts: [
+            { code: 'seongnam', name: '성남시', type: '비규제지역', ltv: 70 },
+            { code: 'suwon', name: '수원시', type: '비규제지역', ltv: 70 },
+            { code: 'goyang', name: '고양시', type: '비규제지역', ltv: 70 },
+            { code: 'yongin', name: '용인시', type: '비규제지역', ltv: 70 },
+            { code: 'bucheon', name: '부천시', type: '비규제지역', ltv: 70 },
+            { code: 'ansan', name: '안산시', type: '비규제지역', ltv: 70 },
+            { code: 'anyang', name: '안양시', type: '비규제지역', ltv: 70 },
+            { code: 'namyangju', name: '남양주시', type: '비규제지역', ltv: 70 },
+            { code: 'hwaseong', name: '화성시', type: '비규제지역', ltv: 70 },
+            { code: 'pyeongtaek', name: '평택시', type: '비규제지역', ltv: 70 }
+        ]
+    }
 };
+
+// 지역 정보 매핑 (기존 호환성 유지)
+const regionMapping = {};
+Object.entries(cityStructure).forEach(([cityCode, city]) => {
+    city.districts.forEach(district => {
+        const key = `${cityCode}-${district.code}`;
+        regionMapping[key] = {
+            name: cityCode === 'seoul' ? `서울 ${district.name}` : `경기 ${district.name}`,
+            type: district.type,
+            ltv: district.ltv
+        };
+    });
+});
 
 // 지역 정보 업데이트
 function updateRegionInfo() {
     const selectedRegion = document.getElementById('preferred-region').value;
     const regionInfo = document.getElementById('region-info');
-    
+
     if (!selectedRegion || !regionMapping[selectedRegion]) {
-        regionInfo.innerHTML = '<p>지역을 선택해주세요.</p>';
+        regionInfo.innerHTML = '<p>시/도와 구/시를 선택해주세요.</p>';
         return;
     }
-    
+
     const region = regionMapping[selectedRegion];
     const maxLoanAmount = '6억원';
-    
+
     regionInfo.innerHTML = `
         <p>💡 <strong>${region.name}</strong>: ${region.type}, LTV ${region.ltv}% (최대 ${maxLoanAmount})</p>
     `;
+}
+
+// 구/시 드롭다운 업데이트 (구매 희망 지역용)
+function updatePreferredDistricts() {
+    const citySelect = document.getElementById('preferred-city');
+    const districtSelect = document.getElementById('preferred-region');
+    const cityCode = citySelect.value;
+
+    districtSelect.innerHTML = '<option value="">구/시 선택</option>';
+
+    if (cityCode && cityStructure[cityCode]) {
+        const city = cityStructure[cityCode];
+        city.districts.forEach(district => {
+            const option = document.createElement('option');
+            option.value = `${cityCode}-${district.code}`;
+            const ltvInfo = district.ltv === 40 ? ' (규제)' : '';
+            option.textContent = `${district.name}${ltvInfo}`;
+            districtSelect.appendChild(option);
+        });
+    }
+
+    updateRegionInfo();
+}
+
+// 구/시 드롭다운 업데이트 (랭킹용)
+function updateRankingDistricts() {
+    const citySelect = document.getElementById('ranking-city');
+    const districtSelect = document.getElementById('ranking-district');
+    const cityCode = citySelect.value;
+
+    districtSelect.innerHTML = '<option value="">구/시 선택</option>';
+
+    if (cityCode && cityStructure[cityCode]) {
+        const city = cityStructure[cityCode];
+        city.districts.forEach(district => {
+            const option = document.createElement('option');
+            option.value = `${cityCode}-${district.code}`;
+            option.textContent = district.name;
+            districtSelect.appendChild(option);
+        });
+    }
+}
+
+// 랭킹 지역 선택 시 호출
+function onRankingDistrictChange() {
+    // 필요 시 추가 동작
 }
 
 // 가격 변동 랭킹 기능
@@ -1451,12 +1519,12 @@ async function fetchMonthData(region, yearMonth) {
 }
 
 async function loadVolatilityRanking() {
-    const region = document.getElementById('ranking-region').value;
+    const region = document.getElementById('ranking-district').value;
     const rankingList = document.getElementById('volatility-ranking-list');
     const loadBtn = document.querySelector('.ranking-load-btn');
 
     if (!region) {
-        rankingList.innerHTML = '<div class="ranking-empty">지역을 선택해주세요.</div>';
+        rankingList.innerHTML = '<div class="ranking-empty">시/도와 구/시를 선택해주세요.</div>';
         return;
     }
 
@@ -1585,9 +1653,13 @@ window.addDebtItem = addDebtItem;
 window.removeDebtItem = removeDebtItem;
 window.updateDebtItem = updateDebtItem;
 window.updateRegionInfo = updateRegionInfo;
+window.updatePreferredDistricts = updatePreferredDistricts;
+window.updateRankingDistricts = updateRankingDistricts;
+window.onRankingDistrictChange = onRankingDistrictChange;
 window.loadVolatilityRanking = loadVolatilityRanking;
 
-// Initialize region info on page load
+// Initialize dropdowns on page load
 document.addEventListener('DOMContentLoaded', function() {
-    updateRegionInfo();
+    // 구매 희망 지역 드롭다운 초기화 (서울시 선택 상태)
+    updatePreferredDistricts();
 });

@@ -1571,3 +1571,44 @@ button:active:not(:disabled) {
     color: #95a5a6;
     margin-top: 2px;
 }
+
+/* 캐스케이드 드롭다운 스타일 */
+.cascading-selects {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.cascading-selects .region-select {
+    flex: 1;
+}
+
+.ranking-controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.ranking-controls .region-select {
+    flex: 1;
+    min-width: 120px;
+}
+
+@media (max-width: 480px) {
+    .cascading-selects {
+        flex-direction: column;
+    }
+    
+    .ranking-controls {
+        flex-direction: column;
+    }
+    
+    .ranking-controls .region-select {
+        width: 100%;
+    }
+    
+    .ranking-load-btn {
+        width: 100%;
+    }
+}

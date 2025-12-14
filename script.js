@@ -1542,11 +1542,12 @@ async function loadVolatilityRanking() {
         // 아파트별 + 평수별 데이터 집계
         const aptData = {};
 
-        // 평수를 5평 단위로 그룹핑 (예: 24평, 34평 등)
+        // ㎡를 평으로 변환 후 5평 단위로 그룹핑
         const normalizeSize = (sizeStr) => {
-            // "25평" 형태에서 숫자만 추출
-            const pyeong = parseInt(sizeStr);
-            if (isNaN(pyeong)) return null;
+            const sqm = parseFloat(sizeStr);
+            if (isNaN(sqm)) return null;
+            // ㎡ → 평 변환 (1평 = 3.3㎡)
+            const pyeong = Math.round(sqm / 3.3);
             // 5평 단위로 반올림 (예: 23→25, 33→35)
             return Math.round(pyeong / 5) * 5;
         };

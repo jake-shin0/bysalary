@@ -31,12 +31,7 @@ const REGION_CODES = {
     'gyeonggi-anyang': '41170',
     'gyeonggi-namyangju': '41360',
     'gyeonggi-hwaseong': '41590',
-    'gyeonggi-pyeongtaek': '41220',
-    'incheon-yeonsu': '28185',
-    'incheon-namdong': '28200',
-    'incheon-bupyeong': '28125',
-    'incheon-seo': '28140',
-    'incheon-jung': '28110'
+    'gyeonggi-pyeongtaek': '41220'
 };
 
 export default async function handler(req, res) {

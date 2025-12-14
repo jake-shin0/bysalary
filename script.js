@@ -1410,14 +1410,7 @@ const regionMapping = {
     'gyeonggi-anyang': { name: '경기 안양시', type: '비규제지역', ltv: 70 },
     'gyeonggi-namyangju': { name: '경기 남양주시', type: '비규제지역', ltv: 70 },
     'gyeonggi-hwaseong': { name: '경기 화성시', type: '비규제지역', ltv: 70 },
-    'gyeonggi-pyeongtaek': { name: '경기 평택시', type: '비규제지역', ltv: 70 },
-    
-    // 인천 (비규제지역)
-    'incheon-yeonsu': { name: '인천 연수구', type: '비규제지역', ltv: 70 },
-    'incheon-namdong': { name: '인천 남동구', type: '비규제지역', ltv: 70 },
-    'incheon-bupyeong': { name: '인천 부평구', type: '비규제지역', ltv: 70 },
-    'incheon-seo': { name: '인천 서구', type: '비규제지역', ltv: 70 },
-    'incheon-jung': { name: '인천 중구', type: '비규제지역', ltv: 70 }
+    'gyeonggi-pyeongtaek': { name: '경기 평택시', type: '비규제지역', ltv: 70 }
 };
 
 // 지역 정보 업데이트
@@ -1438,6 +1431,153 @@ function updateRegionInfo() {
     `;
 }
 
+// 가격 변동 랭킹 기능
+function getMonthsAgo(monthsAgo) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - monthsAgo);
+    return date.getFullYear() + String(date.getMonth() + 1).padStart(2, '0');
+}
+
+async function fetchMonthData(region, yearMonth) {
+    try {
+        const response = await fetch(`/api/apartment-prices?region=${region}&yearMonth=${yearMonth}`);
+        if (!response.ok) return [];
+        const data = await response.json();
+        return data.success ? data.data : [];
+    } catch (error) {
+        console.error(`Failed to fetch data for ${yearMonth}:`, error);
+        return [];
+    }
+}
+
+async function loadVolatilityRanking() {
+    const region = document.getElementById('ranking-region').value;
+    const rankingList = document.getElementById('volatility-ranking-list');
+    const loadBtn = document.querySelector('.ranking-load-btn');
+
+    if (!region) {
+        rankingList.innerHTML = '<div class="ranking-empty">지역을 선택해주세요.</div>';
+        return;
+    }
+
+    // 로딩 표시
+    rankingList.innerHTML = '<div class="ranking-loading">데이터 조회 중...</div>';
+    loadBtn.disabled = true;
+
+    try {
+        // 최근 3개월 데이터 병렬 조회
+        const months = [getMonthsAgo(0), getMonthsAgo(1), getMonthsAgo(2)];
+        const [currentMonth, lastMonth, twoMonthsAgo] = await Promise.all(
+            months.map(m => fetchMonthData(region, m))
+        );
+
+        // 아파트별 데이터 집계
+        const aptData = {};
+
+        const processMonth = (data, monthKey) => {
+            data.forEach(apt => {
+                if (!apt.name || apt.cancelYn === 'O') return;
+                const name = apt.name;
+                if (!aptData[name]) {
+                    aptData[name] = { name, months: {}, location: apt.location };
+                }
+                if (!aptData[name].months[monthKey]) {
+                    aptData[name].months[monthKey] = { prices: [], count: 0 };
+                }
+                aptData[name].months[monthKey].prices.push(apt.price);
+                aptData[name].months[monthKey].count++;
+            });
+        };
+
+        processMonth(currentMonth, 'current');
+        processMonth(lastMonth, 'last');
+        processMonth(twoMonthsAgo, 'twoAgo');
+
+        // 변동률 계산
+        const rankings = [];
+        Object.values(aptData).forEach(apt => {
+            const current = apt.months.current;
+            const twoAgo = apt.months.twoAgo;
+
+            // 현재월과 2개월전 데이터가 모두 있어야 계산 가능
+            if (!current || !twoAgo || current.prices.length === 0 || twoAgo.prices.length === 0) return;
+
+            const currentAvg = current.prices.reduce((a, b) => a + b, 0) / current.prices.length;
+            const twoAgoAvg = twoAgo.prices.reduce((a, b) => a + b, 0) / twoAgo.prices.length;
+
+            const changePercent = ((currentAvg - twoAgoAvg) / twoAgoAvg) * 100;
+
+            rankings.push({
+                name: apt.name,
+                location: apt.location,
+                currentAvg: Math.round(currentAvg),
+                twoAgoAvg: Math.round(twoAgoAvg),
+                changePercent: changePercent,
+                absChange: Math.abs(changePercent),
+                txCount: current.count
+            });
+        });
+
+        // 절대값 기준 정렬 (변동폭이 큰 순)
+        rankings.sort((a, b) => b.absChange - a.absChange);
+
+        // 상위 10개만 표시
+        displayVolatilityRanking(rankings.slice(0, 10), months);
+
+    } catch (error) {
+        console.error('랭킹 조회 실패:', error);
+        rankingList.innerHTML = '<div class="ranking-empty">데이터 조회에 실패했습니다.</div>';
+    } finally {
+        loadBtn.disabled = false;
+    }
+}
+
+function displayVolatilityRanking(rankings, months) {
+    const rankingList = document.getElementById('volatility-ranking-list');
+
+    if (rankings.length === 0) {
+        rankingList.innerHTML = '<div class="ranking-empty">비교 가능한 거래 데이터가 없습니다.<br><small>3개월간 거래 기록이 있는 단지만 표시됩니다.</small></div>';
+        return;
+    }
+
+    const formatPrice = (price) => {
+        if (price >= 10000) {
+            return `${Math.floor(price / 10000)}억 ${price % 10000 > 0 ? (price % 10000) + '만' : ''}`;
+        }
+        return `${price.toLocaleString()}만원`;
+    };
+
+    let html = rankings.map((apt, index) => {
+        const isUp = apt.changePercent > 0;
+        const arrow = isUp ? '↑' : '↓';
+        const changeClass = isUp ? 'up' : 'down';
+        const rankClass = index < 3 ? 'top3' : '';
+
+        return `
+            <div class="ranking-item">
+                <div class="ranking-rank ${rankClass}">${index + 1}</div>
+                <div class="ranking-info">
+                    <div class="ranking-name">${apt.name}</div>
+                    <div class="ranking-detail">${apt.location || ''} · 거래 ${apt.txCount}건</div>
+                </div>
+                <div class="ranking-change ${changeClass}">
+                    <div class="ranking-percent">
+                        <span class="ranking-arrow">${arrow}</span>${Math.abs(apt.changePercent).toFixed(1)}%
+                    </div>
+                    <div class="ranking-price-info">${formatPrice(apt.twoAgoAvg)} → ${formatPrice(apt.currentAvg)}</div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // 기간 표시 추가
+    const periodInfo = `<div class="ranking-period" style="padding: 10px 15px; color: #7f8c8d; font-size: 0.85em; border-bottom: 1px solid #ecf0f1;">
+        기간: ${months[2].slice(0,4)}.${months[2].slice(4)} ~ ${months[0].slice(0,4)}.${months[0].slice(4)}
+    </div>`;
+
+    rankingList.innerHTML = periodInfo + html;
+}
+
 // 전역 함수 추가
 window.selectPurchaseType = selectPurchaseType;
 window.recommendApartment = recommendApartment;
@@ -1445,6 +1585,7 @@ window.addDebtItem = addDebtItem;
 window.removeDebtItem = removeDebtItem;
 window.updateDebtItem = updateDebtItem;
 window.updateRegionInfo = updateRegionInfo;
+window.loadVolatilityRanking = loadVolatilityRanking;
 
 // Initialize region info on page load
 document.addEventListener('DOMContentLoaded', function() {

@@ -1019,7 +1019,6 @@ async function recommendApartment() {
     }
     
     // 선택된 지역의 실거래가 데이터 가져오기
-    const selectedRegion = document.getElementById('preferred-region').value;
     let apartmentData = apartmentDatabase; // 기본값
     
     if (selectedRegion && regionMapping[selectedRegion]) {

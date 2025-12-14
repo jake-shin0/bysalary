@@ -66,14 +66,50 @@ export default async function handler(req, res) {
 
         const response = await fetch(apiUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
         });
 
-        const data = await response.json();
+        const text = await response.text();
+
+        let data;
+        let items = [];
+
+        // XML인지 JSON인지 확인
+        if (text.trim().startsWith('<?xml') || text.trim().startsWith('<response>')) {
+            // XML 파싱 (간단한 정규식 사용)
+            const itemMatches = text.match(/<item>([\s\S]*?)<\/item>/g) || [];
+            items = itemMatches.map(itemXml => {
+                const getValue = (tag) => {
+                    const match = itemXml.match(new RegExp(`<${tag}>([^<]*)</${tag}>`));
+                    return match ? match[1] : '';
+                };
+                return {
+                    aptNm: getValue('aptNm'),
+                    aptDong: getValue('aptDong'),
+                    umdNm: getValue('umdNm'),
+                    jibun: getValue('jibun'),
+                    dealAmount: getValue('dealAmount'),
+                    excluUseAr: getValue('excluUseAr'),
+                    floor: getValue('floor'),
+                    dealYear: getValue('dealYear'),
+                    dealMonth: getValue('dealMonth'),
+                    dealDay: getValue('dealDay'),
+                    buildYear: getValue('buildYear'),
+                    dealingGbn: getValue('dealingGbn'),
+                    estateAgentSggNm: getValue('estateAgentSggNm'),
+                    cdealDay: getValue('cdealDay'),
+                    cdealType: getValue('cdealType')
+                };
+            });
+        } else {
+            // JSON 파싱
+            data = JSON.parse(text);
+            items = data.response?.body?.items?.item || [];
+            if (!Array.isArray(items)) items = [items];
+        }
 
         // 응답 데이터 파싱
-        const items = data.response?.body?.items?.item || [];
         const apartments = Array.isArray(items) ? items : [items];
 
         // 데이터 정제

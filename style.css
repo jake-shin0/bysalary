@@ -1612,3 +1612,11 @@ button:active:not(:disabled) {
         width: 100%;
     }
 }
+
+/* 평수 표시 스타일 */
+.ranking-size {
+    font-size: 0.85em;
+    color: #3498db;
+    font-weight: normal;
+    margin-left: 5px;
+}

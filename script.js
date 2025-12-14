@@ -1539,21 +1539,40 @@ async function loadVolatilityRanking() {
             months.map(m => fetchMonthData(region, m))
         );
 
-        // 아파트별 데이터 집계
+        // 아파트별 + 평수별 데이터 집계
         const aptData = {};
+
+        // 평수를 5평 단위로 그룹핑 (예: 24평, 34평 등)
+        const normalizeSize = (sizeStr) => {
+            // "25평" 형태에서 숫자만 추출
+            const pyeong = parseInt(sizeStr);
+            if (isNaN(pyeong)) return null;
+            // 5평 단위로 반올림 (예: 23→25, 33→35)
+            return Math.round(pyeong / 5) * 5;
+        };
 
         const processMonth = (data, monthKey) => {
             data.forEach(apt => {
                 if (!apt.name || apt.cancelYn === 'O') return;
-                const name = apt.name;
-                if (!aptData[name]) {
-                    aptData[name] = { name, months: {}, location: apt.location };
+                const sizeGroup = normalizeSize(apt.size);
+                if (!sizeGroup) return;
+
+                // 아파트명 + 평수로 고유 키 생성
+                const key = `${apt.name}_${sizeGroup}평`;
+
+                if (!aptData[key]) {
+                    aptData[key] = {
+                        name: apt.name,
+                        size: `${sizeGroup}평형`,
+                        months: {},
+                        location: apt.location
+                    };
                 }
-                if (!aptData[name].months[monthKey]) {
-                    aptData[name].months[monthKey] = { prices: [], count: 0 };
+                if (!aptData[key].months[monthKey]) {
+                    aptData[key].months[monthKey] = { prices: [], count: 0 };
                 }
-                aptData[name].months[monthKey].prices.push(apt.price);
-                aptData[name].months[monthKey].count++;
+                aptData[key].months[monthKey].prices.push(apt.price);
+                aptData[key].months[monthKey].count++;
             });
         };
 
@@ -1577,6 +1596,7 @@ async function loadVolatilityRanking() {
 
             rankings.push({
                 name: apt.name,
+                size: apt.size,
                 location: apt.location,
                 currentAvg: Math.round(currentAvg),
                 twoAgoAvg: Math.round(twoAgoAvg),
@@ -1625,7 +1645,7 @@ function displayVolatilityRanking(rankings, months) {
             <div class="ranking-item">
                 <div class="ranking-rank ${rankClass}">${index + 1}</div>
                 <div class="ranking-info">
-                    <div class="ranking-name">${apt.name}</div>
+                    <div class="ranking-name">${apt.name} <span class="ranking-size">${apt.size || ''}</span></div>
                     <div class="ranking-detail">${apt.location || ''} · 거래 ${apt.txCount}건</div>
                 </div>
                 <div class="ranking-change ${changeClass}">
